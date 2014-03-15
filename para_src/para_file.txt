@@ -1,0 +1,12 @@
+p_arr	10000
+f_arr	20
+simu_T	600
+hot_no	10
+hot_arr	20
+c_prob	0.01
+hr_thres	10
+h_candi_no	200
+he_count	./para_src/flow_info
+ref_t	/mnt/hgfs/VMshared/traces
+hot_c	./para_src/hotspot_candi
+h_scope	6 6 8 8
