@@ -14,32 +14,33 @@
 #include <boost/filesystem.hpp>
 #include <set>
 
-class OFswitch{
-	public:
-	const double offset;
-	rule_list * rList;
-	bucket_tree * bTree;
-	
-	public:
-	size_t mode; // mode 0: CAB, mode 1: CEM, mode 2: CMR, mode 3: CDR
-	double simuT; 
-	double syn_load;
-	size_t TCAMcap;
-	std::string tracefile_str;
+class OFswitch
+{
+public:
+    const double offset;
+    rule_list * rList;
+    bucket_tree * bTree;
 
-	public:
-	OFswitch();
-	OFswitch(double);
+public:
+    uint32_t mode; // mode 0: CAB, mode 1: CEM, mode 2: CMR, mode 3: CDR
+    double simuT;
+    double syn_load;
+    uint32_t TCAMcap;
+    std::string tracefile_str;
 
-	void set_para(std::string, rule_list * = NULL, bucket_tree * = NULL);
-	void run_test();
-	void load_measure();
+public:
+    OFswitch();
+    OFswitch(double);
 
-	private:
-	void CABtest_rt_TCAM();
-	void CEMtest_rt_id();
-	void CDRtest_rt();
-	void CMRtest_rt();
+    void set_para(std::string, rule_list * = NULL, bucket_tree * = NULL);
+    void run_test();
+    void load_measure();
+
+private:
+    void CABtest_rt_TCAM();
+    void CEMtest_rt_id();
+    void CDRtest_rt();
+    void CMRtest_rt();
 };
 
 #endif

@@ -7,21 +7,22 @@
 #include "RuleList.h"
 #include <deque>
 
-using std::vector; 
-class f_node{
-	public:
-		vector<range_addr> intervals;
-		vector<f_node*> edges;
+using std::vector;
+class f_node
+{
+public:
+    vector<range_addr> intervals;
+    vector<f_node*> edges;
 
-		f_node();
-		f_node(size_t);
-		f_node(const vector<range_addr> &);
-		f_node(const range_addr & );
+    f_node();
+    f_node(uint32_t);
+    f_node(const vector<range_addr> &);
+    f_node(const range_addr & );
 
-		bool insert(const r_rule &, size_t );
-		std::string get_str();
-	private:
-		void copy_node_son(f_node *, f_node * );
+    bool insert(const r_rule &, uint32_t );
+    std::string get_str();
+private:
+    void copy_node_son(f_node *, f_node * );
 };
 /*
 class f_node_e:public f_node{
@@ -29,35 +30,38 @@ class f_node_e:public f_node{
 		unsigned short action;
 };
 */
-class m_rule_tree{
-	public:
-		rule_list * rList;
-		f_node * root;
-		vector<size_t> redid;
-		
-		m_rule_tree();
-		m_rule_tree(rule_list *);
-		
-		void print(std::string);
-		bool insert_rule(const r_rule &);
-		bool insert_rule(const p_rule &);
-		f_node * search_node ( const addr_5tup &);
+class m_rule_tree
+{
+public:
+    rule_list * rList;
+    f_node * root;
+    vector<uint32_t> redid;
 
-	private:
-		friend void del_node(f_node *);
-	public:
-		~m_rule_tree();	
+    m_rule_tree();
+    m_rule_tree(rule_list *);
+
+    void print(std::string);
+    bool insert_rule(const r_rule &);
+    bool insert_rule(const p_rule &);
+    f_node * search_node ( const addr_5tup &);
+
+private:
+    friend void del_node(f_node *);
+public:
+    ~m_rule_tree();
 };
 
-class f_node_s{
-	public:
-		range_addr interval;
-		vector<f_node_s*> edges;
-		
+class f_node_s
+{
+public:
+    range_addr interval;
+    vector<f_node_s*> edges;
+
 };
 
-class f_node_se:public f_node_s{
-	public:
-		unsigned short action;
+class f_node_se:public f_node_s
+{
+public:
+    unsigned short action;
 };
 #endif

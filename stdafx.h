@@ -1,15 +1,16 @@
 #ifndef STDAFX_H
 #define STDAFX_H
 
-#include<stdlib.h>
-#include<time.h>
+#include<cstdlib>
+#include<ctime>
 #include<iostream>
 #include<string>
 #include<sstream>
+
 //container
-#include<vector>
-#include<utility>
 #include<iomanip>
+#include<utility>
+#include<vector>
 
 //file system
 #include<fstream>
@@ -18,7 +19,7 @@
 #include<boost/lexical_cast.hpp>
 #include<boost/algorithm/string.hpp>
 
-//Logging 
+//Logging
 //#include<boost/log/sources/basic_logger.hpp>
 
 
