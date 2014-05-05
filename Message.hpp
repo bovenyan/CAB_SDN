@@ -23,7 +23,7 @@ public:
         return data_;
     }
 
-    std::size_t length() const
+    std::uint32_t length() const
     {
         return header_length + body_length_;
     }
@@ -38,19 +38,19 @@ public:
         return data_ + header_length;
     }
 
-    std::size_t body_length() const
+    std::uint32_t body_length() const
     {
         return body_length_;
     }
 
-    void body_length(std::size_t new_length)
+    void body_length(std::uint32_t new_length)
     {
         body_length_ = new_length;
         if (body_length_ > max_body_length)
             body_length_ = max_body_length;
     }
 
-    bool append(char * data, size_t length)
+    bool append(char * data, uint32_t length)
     {
         if(body_length_ + length > max_body_length)
         {
@@ -88,7 +88,7 @@ public:
 
     void encode_header()
     {
-        std::size_t body_length_net = htonl(body_length_);
+        std::uint32_t body_length_net = htonl(body_length_);
         std::memcpy(data_, &body_length_net, 4);
 	is_header_network_ordered = true;
     }
@@ -102,7 +102,7 @@ public:
 
 private:
     char data_[header_length + max_body_length];
-    std::size_t body_length_;
+    std::uint32_t body_length_;
     bool is_header_network_ordered;
 };
 

@@ -8,6 +8,7 @@
 #include <string>
 #include <utility>
 #include <boost/asio.hpp>
+#include <utility>
 #include "Message.hpp"
 #include "BucketTree.h"
 
@@ -17,7 +18,7 @@ using boost::asio::ip::tcp;
 class Adapter
 {
 public:
-    Adapter(bucket_tree & bTree):bTree_(bTree)
+    Adapter(bucket_tree && bTree):bTree_(std::forward<bucket_tree>(bTree))
     {
     }
 
@@ -25,7 +26,7 @@ public:
     {
         char * body = msg.body();
         addr_5tup pkt_h;
-        for(size_t i = 0; i != 4; ++i)
+        for(uint32_t i = 0; i != 4; ++i)
         {
             uint32_t word = 0;
             memcpy(&word,body + i*4,4);
@@ -39,16 +40,28 @@ public:
         b = bTree_.search_bucket(pkt_h,bTree_.root);
         if(b != nullptr)
         {
+            msg.append_uint(b->addrs[0].pref);
+            msg.append_uint(b->addrs[0].mask);
+            msg.append_uint(b->addrs[1].pref);
+            msg.append_uint(b->addrs[1].mask);
+            msg.append_uint(b->addrs[2].pref);
+            msg.append_uint(b->addrs[2].mask);
+            msg.append_uint(b->addrs[3].pref);
+            msg.append_uint(b->addrs[3].mask);
+
             auto & rule_ids = b->related_rules;
             std::cerr <<"rules number : " <<b->related_rules.size() << std::endl;
             auto & rule_list = bTree_.rList->list;
-            for(size_t id : rule_ids)
+            for(uint32_t id : rule_ids)
             {
                 msg.append_uint(rule_list[id].hostpair[0].pref);
                 msg.append_uint(rule_list[id].hostpair[0].mask);
                 msg.append_uint(rule_list[id].hostpair[1].pref);
                 msg.append_uint(rule_list[id].hostpair[1].mask);
-                std::cerr << "body_length_ : " << msg.body_length() << std::endl;
+                msg.append_uint(rule_list[id].portpair[0].range[0]);
+                msg.append_uint(rule_list[id].portpair[0].range[1]);
+                msg.append_uint(rule_list[id].portpair[1].range[0]);
+                msg.append_uint(rule_list[id].portpair[1].range[1]);
             }
 
         }
@@ -56,7 +69,7 @@ public:
         msg.encode_header();
     }
 private:
-    bucket_tree & bTree_;
+    bucket_tree bTree_;
 };
 
 
@@ -73,8 +86,8 @@ class session
     : public std::enable_shared_from_this<session>
 {
 public:
-    session(tcp::socket socket, session_container & container, Adapter & adapter)
-        : socket_(std::move(socket)),
+    session(tcp::socket && socket, session_container & container, Adapter & adapter)
+        : socket_(std::forward<tcp::socket>(socket)),
           container_(container),
           adapter_(adapter)
     {
@@ -99,7 +112,7 @@ private:
         auto self(shared_from_this());
         boost::asio::async_read(socket_,
                                 boost::asio::buffer(msg_.data(), Message::header_length),
-                                [this, self](boost::system::error_code ec, std::size_t /*length*/)
+                                [this, self](boost::system::error_code ec, std::uint32_t /*length*/)
         {
             if (!ec && msg_.decode_header())
             {
@@ -118,7 +131,7 @@ private:
         auto self(shared_from_this());
         boost::asio::async_read(socket_,
                                 boost::asio::buffer(msg_.body(), msg_.body_length()),
-                                [this, self](boost::system::error_code ec, std::size_t /*length*/)
+                                [this, self](boost::system::error_code ec, std::uint32_t /*length*/)
         {
             if (!ec)
             {
@@ -141,7 +154,7 @@ private:
         boost::asio::async_write(socket_,
                                  boost::asio::buffer(msg.data(),
                                          msg.length()),
-                                 [this, self](boost::system::error_code ec, std::size_t /*length*/)
+                                 [this, self](boost::system::error_code ec, std::uint32_t /*length*/)
         {
             if (!ec)
             {
@@ -175,12 +188,12 @@ private:
 class chat_server
 {
 public:
-    chat_server(boost::asio::io_service& io_service,
+    chat_server(boost::asio::io_service& ios,
                 const tcp::endpoint& endpoint,
-                Adapter & adapter)
-        : acceptor_(io_service, endpoint),
-          socket_(io_service),
-          adapter_(adapter)
+                Adapter && adapter)
+        : ios_(ios),
+          acceptor_(ios, endpoint),
+          adapter_(std::forward<Adapter>(adapter))
     {
         do_accept();
     }
@@ -188,23 +201,23 @@ public:
 private:
     void do_accept()
     {
-        acceptor_.async_accept(socket_,
-                               [this](boost::system::error_code ec)
+        tcp::socket skt(ios_);
+        acceptor_.async_accept(skt,
+                               [&](boost::system::error_code ec)
         {
             if (!ec)
             {
-                std::make_shared<session>(std::move(socket_), container_, adapter_)->start();
+                std::make_shared<session>(std::move(skt), container_, adapter_)->start();
             }
 
             do_accept();
         });
     }
-
+    boost::asio::io_service & ios_;
     tcp::acceptor acceptor_;
-    tcp::socket socket_;
+    Adapter adapter_;
     //session life cycle management
     std::set<std::shared_ptr<session>> container_;
-    Adapter & adapter_;
 };
 
 //----------------------------------------------------------------------
@@ -216,21 +229,20 @@ int main(int argc, char* argv[])
         std::cerr << "Usage: CABDeamon {/path/to/rule/file} <port>"
                   << std::endl;
     }
-
+    std::cerr << sizeof(uint32_t) << std::endl;
     //initialize CAB
     std::string rulefile(argv[1]);
     rule_list rList(rulefile);
     std::cerr << "loading rule : " << rList.list.size() << std::endl;
-    bucket_tree bTree(rList, size_t(20));
-
-    Adapter adapter(bTree);
+    bucket_tree bTree(rList, uint32_t(20));
+    Adapter adapter(std::move(bTree));
 
     try
     {
         boost::asio::io_service io_service;
 
         tcp::endpoint endpoint(tcp::v4(), std::atoi(argv[2]));
-        chat_server server(io_service, endpoint , adapter);
+        chat_server server(io_service, endpoint , std::move(adapter));
 
         io_service.run();
     }
@@ -241,11 +253,3 @@ int main(int argc, char* argv[])
 
     return 0;
 }
-
-
-
-
-
-
-
-
