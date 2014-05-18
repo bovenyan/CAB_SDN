@@ -12,14 +12,12 @@ using std::string;
  */
 rule_list::rule_list() {}
 
-rule_list::rule_list(string & filename)
-{
+rule_list::rule_list(string & filename) {
     ifstream file;
     file.open(filename.c_str());
     string sLine = "";
     getline(file, sLine);
-    while (!file.eof())
-    {
+    while (!file.eof()) {
         p_rule sRule(sLine);
         list.push_back(sRule);
         getline(file, sLine);
@@ -29,15 +27,11 @@ rule_list::rule_list(string & filename)
 
 /* member func
  */
-void rule_list::obtain_dep()   // obtain the dependency map
-{
-    for(uint32_t idx = 0; idx < list.size(); ++idx)
-    {
+void rule_list::obtain_dep() { // obtain the dependency map
+    for(uint32_t idx = 0; idx < list.size(); ++idx) {
         vector <uint32_t> dep_rules;
-        for (uint32_t idx1 = 0; idx1 < idx; ++idx1)
-        {
-            if (list[idx].dep_rule(list[idx1]))
-            {
+        for (uint32_t idx1 = 0; idx1 < idx; ++idx1) {
+            if (list[idx].dep_rule(list[idx1])) {
                 dep_rules.push_back(idx1);
             }
         }
@@ -45,54 +39,58 @@ void rule_list::obtain_dep()   // obtain the dependency map
     }
 }
 
-r_rule rule_list::get_micro_rule(const addr_5tup & pack)   // get the micro rule for a given packet;
-{
+r_rule rule_list::get_micro_rule(const addr_5tup & pack) { // get the micro rule for a given packet;
     // linear search to find the matching packet
     uint32_t rule_hit_idx = 0;
-    for ( ; rule_hit_idx < list.size(); ++rule_hit_idx )
-    {
+    for ( ; rule_hit_idx < list.size(); ++rule_hit_idx ) {
         if (list[rule_hit_idx].packet_hit(pack))
             break;
     }
 
-    if (rule_hit_idx == list.size())
-    {
+    if (rule_hit_idx == list.size()) {
         cout <<"wrong packet"<<endl;
         exit(0);
     }
 
     // pruning for a micro rule
     r_rule mRule = list[rule_hit_idx];
-    for (auto iter = dep_map[rule_hit_idx].begin(); iter != dep_map[rule_hit_idx].end(); ++iter)
-    {
+    for (auto iter = dep_map[rule_hit_idx].begin(); iter != dep_map[rule_hit_idx].end(); ++iter) {
         mRule.prune_mic_rule(list[*iter], pack);
     }
     return mRule;
+}
+
+int rule_list::linear_search(const addr_5tup & packet) {
+    for (size_t i = 0; i < list.size(); ++i) {
+        if (list[i].packet_hit(packet))
+            return i;
+    }
+    return -1;
+}
+
+void rule_list::clearHitFlag() {
+    for (auto iter = list.begin(); iter!=list.end(); ++iter)
+        iter->hit = false;
 }
 
 
 /*
  * debug and print
  */
-void rule_list::print(const string & filename)
-{
+void rule_list::print(const string & filename) {
     ofstream file;
     file.open(filename.c_str());
-    for (vector<p_rule>::iterator iter = list.begin(); iter != list.end(); iter++)
-    {
+    for (vector<p_rule>::iterator iter = list.begin(); iter != list.end(); iter++) {
         file<<iter->get_str()<<endl;
     }
     file.close();
 }
 
-void rule_list::rule_dep_analysis()
-{
+void rule_list::rule_dep_analysis() {
     ofstream ff("rule rec");
-    for (uint32_t idx = 0; idx < list.size(); ++idx)
-    {
+    for (uint32_t idx = 0; idx < list.size(); ++idx) {
         ff<<"rule : "<< list[idx].get_str() << endl;
-        for ( uint32_t idx1 = 0; idx1 < idx; ++idx1)
-        {
+        for ( uint32_t idx1 = 0; idx1 < idx; ++idx1) {
             auto result = list[idx].join_rule(list[idx1]);
             if (result.second)
                 ff << result.first.get_str()<<endl;
@@ -101,3 +99,5 @@ void rule_list::rule_dep_analysis()
         ff<<endl;
     }
 }
+
+

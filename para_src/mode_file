@@ -1,7 +1,5 @@
-mode	2
+mode	0
 simuT	600
-load	50
-TCAMcap	100000
-//tracefile_str	./TracePruning/GENtrace/ref_trace.gz
-tracefile_str	./TracePruning/IDtrace/ref_trace.gz
-//tracefile_str	./TracePruning/trace_pruned_trans.gz
+TCAMcap	1500
+rtt	0.2
+tracefile_str	../ref_trace.gz

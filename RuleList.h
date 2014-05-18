@@ -16,6 +16,9 @@ public:
     rule_list(std::string &);
     void obtain_dep();
     r_rule get_micro_rule (const addr_5tup &);
+    int linear_search(const addr_5tup &);
+
+    void clearHitFlag();
 
     void rule_dep_analysis();
     void print(const std::string &);

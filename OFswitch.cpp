@@ -10,14 +10,12 @@ using std::ifstream;
  * set offset as 346.844 by DOE trace, arrival time of first packet
  */
 
-OFswitch::OFswitch():offset(346.844)
-{
+OFswitch::OFswitch():offset(346.844) {
     rList = NULL;
     bTree = NULL;
 
     mode = 0;
     simuT = 0;
-    syn_load = 0;
     TCAMcap = 0;
     tracefile_str = "";
 }
@@ -29,34 +27,24 @@ OFswitch::OFswitch():offset(346.844)
  * method brief:
  * same as default
  */
-void OFswitch::set_para(string para_file, rule_list * rL, bucket_tree * bT)
-{
+void OFswitch::set_para(string para_file, rule_list * rL, bucket_tree * bT) {
     ifstream ff(para_file);
     rList = rL;
     bTree = bT;
 
-    for (string str; getline(ff, str); )
-    {
+    for (string str; getline(ff, str); ) {
         vector<string> temp;
         boost::split(temp, str, boost::is_any_of("\t"));
-        if (!temp[0].compare("mode"))
-        {
+        if (!temp[0].compare("mode")) {
             mode = boost::lexical_cast<uint32_t>(temp[1]);
         }
-        if (!temp[0].compare("simuT"))
-        {
+        if (!temp[0].compare("simuT")) {
             simuT = boost::lexical_cast<double>(temp[1]);
         }
-        if (!temp[0].compare("load"))
-        {
-            syn_load = boost::lexical_cast<double>(temp[1]);
-        }
-        if (!temp[0].compare("TCAMcap"))
-        {
+        if (!temp[0].compare("TCAMcap")) {
             TCAMcap = boost::lexical_cast<uint32_t>(temp[1]);
         }
-        if (!temp[0].compare("tracefile_str"))
-        {
+        if (!temp[0].compare("tracefile_str")) {
             tracefile_str = temp[1];
         }
     }
@@ -69,10 +57,8 @@ void OFswitch::set_para(string para_file, rule_list * rL, bucket_tree * bT)
  * mode 0: CAB, mode 1: Exact Match, mode 2: Cache Dependent Rules, mode 3: Cache micro rules
  */
 
-void OFswitch::run_test()
-{
-    switch (mode)
-    {
+void OFswitch::run_test() {
+    switch (mode) {
     case 0:
         CABtest_rt_TCAM();
         break;
@@ -90,28 +76,6 @@ void OFswitch::run_test()
     }
 }
 
-/* load_measure
- *
- * method brief:
- * measure the load of a synthetic trace generated
- */
-void OFswitch::load_measure()
-{
-    ifstream ff(tracefile_str);
-    boost::unordered_set<addr_5tup> header_set;
-    double curT = 0;
-    double interval = 1/syn_load;
-    for (string str; getline(ff, str); )
-    {
-        curT += interval;
-        addr_5tup packet(str, curT);
-        header_set.insert(packet);
-        if (curT > simuT+offset)
-            break;
-    }
-    cout << "flow no.:" << header_set.size() <<endl;
-}
-
 /* CABtest_rt_TCAM
  *
  * method brief:
@@ -119,15 +83,13 @@ void OFswitch::load_measure()
  * trace format <addr5tup(easyRW)>
  * test CAB performance
  */
-void OFswitch::CABtest_rt_TCAM()
-{
+void OFswitch::CABtest_rt_TCAM() {
     double curT = 0;
 
     lru_cache_cab cam_cache(TCAMcap, simuT);
     boost::unordered_set<addr_5tup> flow_rec;
 
-    try
-    {
+    try {
         io::filtering_istream in;
         in.push(io::gzip_decompressor());
         ifstream infile(tracefile_str);
@@ -138,26 +100,21 @@ void OFswitch::CABtest_rt_TCAM()
         addr_5tup first_packet(str, false);
         curT = first_packet.timestamp;
 
-        while(getline(in, str))
-        {
+        while(getline(in, str)) {
             addr_5tup packet(str, false);
             curT = packet.timestamp;
             auto res = flow_rec.insert(packet);
-            bucket* buck = bTree->search_bucket(packet, bTree->root);
+            bucket* buck = bTree->search_bucket(packet, bTree->root).first;
             //++total_packet;
-            if (buck!=NULL)
-            {
+            if (buck!=NULL) {
                 cam_cache.ins_rec(buck, curT, res.second);
-            }
-            else
+            } else
                 cout<<"null bucket" <<endl;
 
             if (curT > simuT+offset)
                 break;
         }
-    }
-    catch (const io::gzip_error & e)
-    {
+    } catch (const io::gzip_error & e) {
         cout<<e.what()<<endl;
     }
 
@@ -171,11 +128,9 @@ void OFswitch::CABtest_rt_TCAM()
  * trace format <time \t ID>
  * others same as CABtest_rt_TCAM
  */
-void OFswitch::CEMtest_rt_id()
-{
+void OFswitch::CEMtest_rt_id() {
     fs::path ref_trace_path(tracefile_str);
-    if (!(fs::exists(ref_trace_path) && fs::is_regular_file(ref_trace_path)))
-    {
+    if (!(fs::exists(ref_trace_path) && fs::is_regular_file(ref_trace_path))) {
         cout<<"Missing Ref file"<<endl;
         return;
     }
@@ -184,8 +139,7 @@ void OFswitch::CEMtest_rt_id()
     lru_cache<uint32_t> flow_table(TCAMcap, simuT);
     std::set<uint32_t> flow_rec;
 
-    try
-    {
+    try {
         io::filtering_istream trace_stream;
         trace_stream.push(io::gzip_decompressor());
         ifstream trace_file(tracefile_str);
@@ -193,8 +147,7 @@ void OFswitch::CEMtest_rt_id()
 
         string str;
 
-        while(getline(trace_stream, str))
-        {
+        while(getline(trace_stream, str)) {
             vector<string> temp;
             boost::split(temp, str, boost::is_any_of("\t"));
             curT = boost::lexical_cast<double> (temp[0]);
@@ -205,9 +158,7 @@ void OFswitch::CEMtest_rt_id()
             if (curT > simuT+offset)
                 break;
         }
-    }
-    catch (const io::gzip_error & e)
-    {
+    } catch (const io::gzip_error & e) {
         cout<<e.what()<<endl;
     }
 
@@ -221,11 +172,9 @@ void OFswitch::CEMtest_rt_id()
  * test caching all dependent rules
  * others same as CABtest_rt_TCAM
  */
-void OFswitch::CDRtest_rt()
-{
+void OFswitch::CDRtest_rt() {
     fs::path ref_trace_path(tracefile_str);
-    if (!(fs::exists(ref_trace_path) && fs::is_regular_file(ref_trace_path)))
-    {
+    if (!(fs::exists(ref_trace_path) && fs::is_regular_file(ref_trace_path))) {
         cout<<"Missing Ref file"<<endl;
         return;
     }
@@ -235,23 +184,19 @@ void OFswitch::CDRtest_rt()
 
     double curT = 0;
 
-    try
-    {
+    try {
         io::filtering_istream trace_stream;
         trace_stream.push(io::gzip_decompressor());
         ifstream trace_file(tracefile_str);
         trace_stream.push(trace_file);
 
         string str;
-        while(getline(trace_stream, str))
-        {
+        while(getline(trace_stream, str)) {
             addr_5tup packet(str, false);
             curT = packet.timestamp;
 
-            for (uint32_t idx = 0; idx < rList->list.size(); idx++)   // linear search
-            {
-                if ((rList->list[idx]).packet_hit(packet))
-                {
+            for (uint32_t idx = 0; idx < rList->list.size(); idx++) { // linear search
+                if ((rList->list[idx]).packet_hit(packet)) {
                     auto res = processed_flow.insert(packet);
                     cam_cache.ins_rec(idx, curT, rList->dep_map[idx], res.second);
                     break;
@@ -261,9 +206,7 @@ void OFswitch::CDRtest_rt()
             if (curT > simuT+offset)
                 break;
         }
-    }
-    catch (const io::gzip_error & e)
-    {
+    } catch (const io::gzip_error & e) {
         cout<<e.what()<<endl;
     }
 
@@ -271,11 +214,9 @@ void OFswitch::CDRtest_rt()
 }
 
 
-void OFswitch::CMRtest_rt()
-{
+void OFswitch::CMRtest_rt() {
     fs::path ref_trace_path(tracefile_str);
-    if (!(fs::exists(ref_trace_path) && fs::is_regular_file(ref_trace_path)))
-    {
+    if (!(fs::exists(ref_trace_path) && fs::is_regular_file(ref_trace_path))) {
         cout<<"Missing Ref file"<<endl;
         return;
     }
@@ -285,16 +226,14 @@ void OFswitch::CMRtest_rt()
     lru_cache<r_rule> cam_cache(TCAMcap, simuT);
     boost::unordered_set<addr_5tup> flow_rec;
 
-    try
-    {
+    try {
         io::filtering_istream trace_stream;
         trace_stream.push(io::gzip_decompressor());
         ifstream trace_file(tracefile_str);
         trace_stream.push(trace_file);
 
         string str;
-        while(getline(trace_stream, str))
-        {
+        while(getline(trace_stream, str)) {
             addr_5tup packet(str, false);
             curT = packet.timestamp;
             auto res = flow_rec.insert(packet);
@@ -305,9 +244,7 @@ void OFswitch::CMRtest_rt()
             if (curT > simuT +offset)
                 break;
         }
-    }
-    catch (const io::gzip_error & e)
-    {
+    } catch (const io::gzip_error & e) {
         cout<<e.what()<<endl;
     }
     cam_cache.fetch_data();

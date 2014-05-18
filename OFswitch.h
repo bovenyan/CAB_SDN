@@ -24,7 +24,6 @@ public:
 public:
     uint32_t mode; // mode 0: CAB, mode 1: CEM, mode 2: CMR, mode 3: CDR
     double simuT;
-    double syn_load;
     uint32_t TCAMcap;
     std::string tracefile_str;
 
@@ -34,7 +33,6 @@ public:
 
     void set_para(std::string, rule_list * = NULL, bucket_tree * = NULL);
     void run_test();
-    void load_measure();
 
 private:
     void CABtest_rt_TCAM();

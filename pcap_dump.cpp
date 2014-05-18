@@ -10,8 +10,7 @@
 #include "Address.hpp"
 using namespace std;
 
-struct packet
-{
+struct packet {
     packet():ether_h(),ip_h(),tcp_h() {};
     sniff_ethernet ether_h;
     sniff_ip ip_h;
@@ -21,8 +20,7 @@ struct packet
 namespace fs = boost::filesystem;
 namespace io = boost::iostreams;
 
-int main(int argc, char * argv[])
-{
+int main(int argc, char * argv[]) {
     cout << "unsigned int : " << sizeof(unsigned int) << endl;
     cout << "unsigned long : " << sizeof(unsigned long) << endl;
     cout << "ethernet packet length : " << sizeof(sniff_ethernet) << endl;
@@ -30,29 +28,25 @@ int main(int argc, char * argv[])
     cout << "tcp packet length : " << sizeof(sniff_tcp) << endl;
     cout << "full stack packet length : " << sizeof(packet) << endl;
 
-    if(argc < 3)
-    {
+    if(argc < 3) {
         cerr << "Usage: 2pcap_dump {path/to/trace/file/} {path/to/tcpdump/file}" << endl;
         return 1;
     }
 
     ifstream infile(argv[1]);
-    if(!infile.is_open())
-    {
+    if(!infile.is_open()) {
         cerr << "can not open trace file." << endl;
         return 2;
     }
 
     pcap_t* handle = pcap_open_dead(DLT_EN10MB,144);
     pcap_dumper_t* file = pcap_dump_open(handle,argv[2]);
-    if(file == NULL)
-    {
+    if(file == NULL) {
         cout << pcap_geterr(handle) << endl;
         return 3;
     }
 
-    try
-    {
+    try {
         io::filtering_istream in;
         in.push(io::gzip_decompressor());
         in.push(infile);
@@ -60,11 +54,10 @@ int main(int argc, char * argv[])
 
         unsigned int seq = 0;
         unsigned int ack = 0;
-        while(getline(in, b))
-        {
+        while(getline(in, b)) {
             addr_5tup addr5(b, false);
             cerr << "converting.... : " << addr5.str_readable() << endl;
-	    cerr << addr5.addrs[2] << "\t" << addr5.addrs[3] << endl;
+            cerr << addr5.addrs[2] << "\t" << addr5.addrs[3] << endl;
             pcap_pkthdr entry_h;
             entry_h.len = sizeof(sniff_ethernet) + sizeof(sniff_ip) + sizeof(sniff_tcp);
             entry_h.caplen = entry_h.len;
@@ -91,9 +84,7 @@ int main(int argc, char * argv[])
             memcpy(buffer + sizeof(sniff_ethernet) + sizeof(sniff_ip), &(h.tcp_h), sizeof(sniff_tcp));
             pcap_dump((u_char *)file,&entry_h, (unsigned char *)&buffer);
         }
-    }
-    catch (const io::gzip_error & e)
-    {
+    } catch (const io::gzip_error & e) {
 
         pcap_dump_flush(file);
         pcap_dump_close(file);

@@ -10,7 +10,6 @@
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/copy.hpp>
-#include <boost/filesystem.hpp>
 #include <cassert>
 #include <thread>
 #include <future>
@@ -29,6 +28,14 @@ using boost::unordered_set;
 namespace fs = boost::filesystem;
 namespace io = boost::iostreams;
 
+/*
+ * Usage:
+ *   tracer tGen(rulelist pointer);
+ *   tGen.setpara(parameter file);
+ *   tGen.hotspot(reference file)
+ *   pFlow_pruning_gen (objective synthetic trace directory)
+ */
+
 class tracer
 {
 public:
@@ -46,6 +53,7 @@ private:
     const double offset;
     double terminT;
     atomic_uint total_packet;
+    uint32_t mut_scalar[2];
 
     // locality traffic parameter
     string flowInfoFile_str;
@@ -68,7 +76,7 @@ public:
     void merge_files(string) const;
 
     void hotspot_prob(string);
-    void hotspot_prob_b(string, string);
+    void hotspot_prob_b(string, bool = false);
 
     // trace generation and evaluation
     void pFlow_pruning_gen(string);
@@ -79,18 +87,6 @@ public:
     void packet_count_mp(string, string);
     void p_count_st(fs::path, atomic_uint*, mutex *, boost::unordered_map<addr_5tup, uint32_t>*, atomic_bool *);
     void printTestTrace(string);
-
-    // deprecated
-    void pruning_trace_mp(string, string, string = "./TracePruning/IDtrace/ref_trace.gz");
-    void p_trace_st(fs::path, string, atomic_uint*, boost::unordered_map<addr_5tup, uint32_t> *, atomic_bool *);
-    void gen_local_trace(string, string="./TracePruning/GENtrace/ref_trace.gz", string = "./TracePruning/hotspot_candi");
-    void packet_count(string, string = "./trace_packet.gz");
-//	void packet_count_t(string = "./TracePruning/test_trace", string = "./TracePruning/test_trace_count.txt");
-    void pruning_trace(string, string, string = "./ref_trace.gz");
-    void gen_random_trace(string, string="./gen_trace.gz");
-    //void gen_local_trace_mp(string, string="./TracePruning/ref_trace.gz", string = "./TracePruning/hotspot_candi");
-    //void s_locality_st(filesystem::path, string, list<h_rule>, uint32_t, unordered_map<uint32_t, addr_5tup> *, atomic_uint*, atomic_bool *);
-    //void set_locality_para(string = "./TracePruning/locality_para");
 };
 
 

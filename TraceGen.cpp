@@ -26,14 +26,12 @@ typedef boost::unordered_map<addr_5tup, uint32_t>::iterator Map_iter;
  * function brief:
  * constructor: set rule list and simulation time offset
  */
-tracer::tracer():offset(346.844), total_packet(0)
-{
+tracer::tracer():offset(346.844), total_packet(0) {
     rList = NULL;
     flow_no = 0;
 }
 
-tracer::tracer(rule_list * rL):offset(346.844), total_packet(0)
-{
+tracer::tracer(rule_list * rL):offset(346.844), total_packet(0) {
     rList = rL;
     flow_no = 0;
 }
@@ -48,72 +46,62 @@ tracer::tracer(rule_list * rL):offset(346.844), total_packet(0)
  * function brief:
  * set the parameters according to a parameter file
  */
-void tracer::set_para(string loc_para_str)
-{
+void tracer::set_para(string loc_para_str) {
     ifstream ff(loc_para_str);
-    for (string str; getline(ff, str); )
-    {
+    for (string str; getline(ff, str); ) {
         vector<string> temp;
         boost::split(temp, str, boost::is_any_of("\t"));
-        if (!temp[0].compare("ref_t"))
-        {
+        if (!temp[0].compare("ref_t")) {
             ref_trace_dir_str = temp[1];
         }
-        if (!temp[0].compare("hot_c"))
-        {
+        if (!temp[0].compare("hot_c")) {
             hotcandi_str = temp[1];
         }
-        if (!temp[0].compare("p_arr"))
-        {
+        if (!temp[0].compare("p_arr")) {
             data_rate = boost::lexical_cast<double>(temp[1]);
         }
-        if (!temp[0].compare("f_arr"))
-        {
+        if (!temp[0].compare("f_arr")) {
             flow_rate = boost::lexical_cast<double>(temp[1]);
         }
-        if (!temp[0].compare("simu_T"))
-        {
+        if (!temp[0].compare("simu_T")) {
             duration = boost::lexical_cast<double>(temp[1]);
             terminT = duration+offset;
         }
-        if (!temp[0].compare("hot_no"))
-        {
+        if (!temp[0].compare("hot_no")) {
             hotspot_no = boost::lexical_cast<uint32_t>(temp[1]);
         }
-        if (!temp[0].compare("hot_arr"))
-        {
+        if (!temp[0].compare("hot_arr")) {
             hotvtime = boost::lexical_cast<double>(temp[1]);
         }
-        if (!temp[0].compare("c_prob"))
-        {
+        if (!temp[0].compare("c_prob")) {
             cold_prob = boost::lexical_cast<double>(temp[1]);
         }
-        if (!temp[0].compare("hr_thres"))
-        {
+        if (!temp[0].compare("hr_thres")) {
             hot_rule_thres = boost::lexical_cast<uint32_t>(temp[1]);
         }
-        if (!temp[0].compare("h_candi_no"))
-        {
+        if (!temp[0].compare("h_candi_no")) {
             hot_candi_no = boost::lexical_cast<uint32_t>(temp[1]);
         }
-        if (!temp[0].compare("he_count"))
-        {
+        if (!temp[0].compare("he_count")) {
             flowInfoFile_str = temp[1];
         }
-        if (!temp[0].compare("h_scope"))
-        {
+        if (!temp[0].compare("h_scope")) {
             vector<string> temp1;
             boost::split(temp1, temp[1], boost::is_any_of(" "));
-            for (uint32_t i = 0; i < 4; i++)
-            {
+            for (uint32_t i = 0; i < 4; i++) {
                 scope[i] = boost::lexical_cast<uint32_t>(temp1[i]);
             }
         }
+	if (!temp[0].compare("mutate_scalar")){
+		vector<string> temp1;
+            	boost::split(temp1, temp[1], boost::is_any_of(" "));
+		mut_scalar[0] = boost::lexical_cast<uint32_t>(temp1[0]);
+		mut_scalar[1] = boost::lexical_cast<uint32_t>(temp1[1]);
+	}
     }
 }
 
-void tracer::print_setup() const
-{
+void tracer::print_setup() const {
     cout <<" ======= SETUP BRIEF: ======="<<endl;
     cout<<"reference trace directory is in\t"<<ref_trace_dir_str<<endl;
     cout<<"header info is in : " << flowInfoFile_str << endl;
@@ -138,19 +126,14 @@ void tracer::print_setup() const
  * function brief:
  * 	  outputs the first packet timestamp of each trace file, helps determine how many trace files to use
  */
-void tracer::trace_get_ts(string trace_ts_file)
-{
+void tracer::trace_get_ts(string trace_ts_file) {
     fs::path dir(ref_trace_dir_str);
     fs::directory_iterator end;
     ofstream ffo(trace_ts_file);
-    if (fs::exists(dir) && fs::is_directory(dir))
-    {
-        for (fs::directory_iterator iter(dir); (iter != end); ++iter)
-        {
-            if (fs::is_regular_file(iter->status()))
-            {
-                try
-                {
+    if (fs::exists(dir) && fs::is_directory(dir)) {
+        for (fs::directory_iterator iter(dir); (iter != end); ++iter) {
+            if (fs::is_regular_file(iter->status())) {
+                try {
                     io::filtering_istream in;
                     in.push(io::gzip_decompressor());
                     ifstream infile(iter->path().c_str());
@@ -160,9 +143,7 @@ void tracer::trace_get_ts(string trace_ts_file)
                     addr_5tup f_packet(str);
                     ffo<<iter->path() << "\t" << f_packet.timestamp <<endl;
                     io::close(in); // careful
-                }
-                catch (const io::gzip_error & e)
-                {
+                } catch (const io::gzip_error & e) {
                     cout<<e.what()<<std::endl;
                 }
 
@@ -180,20 +161,15 @@ void tracer::trace_get_ts(string trace_ts_file)
  * function_brief:
  * get the paths of real traces within the range of the simulation Time
  */
-vector<fs::path> tracer::get_proc_files ( string ref_trace_dir) const
-{
+vector<fs::path> tracer::get_proc_files ( string ref_trace_dir) const {
     // find out how many files to process
     fs::path dir(ref_trace_dir);
     fs::directory_iterator end;
     vector<fs::path> to_proc_files;
-    if (fs::exists(dir) && fs::is_directory(dir))
-    {
-        for (fs::directory_iterator iter(dir); iter != end; ++iter)
-        {
-            try
-            {
-                if (fs::is_regular_file(iter->status()))
-                {
+    if (fs::exists(dir) && fs::is_directory(dir)) {
+        for (fs::directory_iterator iter(dir); iter != end; ++iter) {
+            try {
+                if (fs::is_regular_file(iter->status())) {
                     io::filtering_istream in;
                     in.push(io::gzip_decompressor());
                     ifstream infile(iter->path().c_str());
@@ -201,17 +177,14 @@ vector<fs::path> tracer::get_proc_files ( string ref_trace_dir) const
                     string str;
                     getline(in,str);
                     addr_5tup packet(str); // readable
-                    if (packet.timestamp > terminT)
-                    {
+                    if (packet.timestamp > terminT) {
                         io::close(in);
                         break;
                     }
                     to_proc_files.push_back(iter->path());
                     io::close(in);
                 }
-            }
-            catch(const io::gzip_error & e)
-            {
+            } catch(const io::gzip_error & e) {
                 cout<<e.what()<<endl;
             }
         }
@@ -223,8 +196,7 @@ vector<fs::path> tracer::get_proc_files ( string ref_trace_dir) const
  *
  * output: uint32_t: the count no. of processors, helps determine thread no.
  */
-uint32_t count_proc()
-{
+uint32_t count_proc() {
     ifstream infile ("/proc/cpuinfo");
     uint32_t counter = 0;
     for (string str; getline(infile,str); )
@@ -241,20 +213,17 @@ uint32_t count_proc()
  * Collects the gz traces with prefix "ptrace-";
  * Merge into one gz trace named "ref_trace.gz"
  */
-void tracer::merge_files(string gen_trace_dir) const
-{
+void tracer::merge_files(string gen_trace_dir) const {
     fs::path file (gen_trace_dir + "/ref_trace.gz");
     if (fs::exists(file))
         fs::remove(file);
 
-    for (uint32_t i = 0; ; ++i)
-    {
+    for (uint32_t i = 0; ; ++i) {
         stringstream ss;
         //ss<<gen_trace_dir<<"/ref_trace-"<<i<<".gz";
         ss<<gen_trace_dir<<"/ptrace-"<<i<<".gz";
         fs::path to_merge(ss.str());
-        if (fs::exists(to_merge))
-        {
+        if (fs::exists(to_merge)) {
             io::filtering_ostream out;
             out.push(io::gzip_compressor());
             ofstream out_file(gen_trace_dir+"/ref_trace.gz", std::ios_base::app);
@@ -268,8 +237,7 @@ void tracer::merge_files(string gen_trace_dir) const
             in.pop();
             fs::remove(to_merge);
             out.pop();
-        }
-        else
+        } else
             break;
     }
 }
@@ -281,14 +249,12 @@ void tracer::merge_files(string gen_trace_dir) const
  * function brief:
  * probe and generate the hotspot candidate and put them into a candidate file for later header mapping
  */
-void tracer::hotspot_prob(string sav_str)
-{
+void tracer::hotspot_prob(string sav_str) {
     uint32_t hs_count = 0;
     ofstream ff (sav_str);
     uint32_t probe_scope[4];
     uint32_t trial = 0;
-    while (hs_count < hot_candi_no)
-    {
+    while (hs_count < hot_candi_no) {
         vector<p_rule>::iterator iter = rList->list.begin();
         advance (iter, rand() % rList->list.size());
         // cout<< "candi rule:" << iter->get_str() << endl;
@@ -298,8 +264,7 @@ void tracer::hotspot_prob(string sav_str)
             probe_scope[i] = scope[i]/2 + rand()%scope[i];
         h_rule hr (probe_center, probe_scope);
         cout << hr.get_str() << "\t" << hr.cal_rela(rList->list) << endl;
-        if (hr.cal_rela(rList->list) >= hot_rule_thres)
-        {
+        if (hr.cal_rela(rList->list) >= hot_rule_thres) {
             ff << probe_center.str_easy_RW() << "\t" << probe_scope[0] << ":"
                << probe_scope[1] << ":" << probe_scope[2] << ":" <<
                probe_scope[3]<<endl;
@@ -309,8 +274,7 @@ void tracer::hotspot_prob(string sav_str)
 
         ++trial;
 
-        if (trial > 100)
-        {
+        if (trial > 100) {
             cout<<"change para setting"<<endl;
             return;
         }
@@ -325,31 +289,42 @@ void tracer::hotspot_prob(string sav_str)
  * function brief:
  * generate the hotspot candidate with some reference file and put them into a candidate file for later header mapping
  */
-void tracer::hotspot_prob_b(string bFile, string sav_str)
-{
+void tracer::hotspot_prob_b(string bFile, bool mutation) {
     uint32_t hs_count = 0;
-    ofstream ff (sav_str);
+    if (mutation)
+	    hotcandi_str += "_m";
+    ofstream ff (hotcandi_str);
     vector <string> file;
     ifstream in (bFile);
-    for (string str; getline(in, str); )
-    {
+    cout << "hot_rule_thres " << hot_rule_thres <<endl;
+    for (string str; getline(in, str); ) {
         vector<string> temp;
         boost::split(temp, str, boost::is_any_of("\t"));
-        if (boost::lexical_cast<uint32_t>(temp.back()) > hot_rule_thres)
-        {
-            // do some modification here instead of direct push bucket
-            file.push_back(str);
+        if (boost::lexical_cast<uint32_t>(temp.back()) > hot_rule_thres) {
+		if (mutation){
+			b_rule br(str);
+			br.mutate_pred(mut_scalar[0], mut_scalar[1]);
+			str = br.get_str();
+			size_t assoc_no = 0;
+			for (auto iter = rList->list.begin(); iter != rList->list.end(); ++iter)
+				if (br.match_rule(*iter))
+					++assoc_no;
+			stringstream ss;
+			ss<< str << "\t" << assoc_no;
+			str = ss.str();
+		}
+		file.push_back(str);
         }
     }
     random_shuffle(file.begin(), file.end());
     vector<string>::iterator iter = file.begin();
-    while (hs_count < hot_candi_no && iter < file.end())
-    {
+    while (hs_count < hot_candi_no && iter < file.end()) {
         ff <<*iter<<endl;
         iter++;
         ++hs_count;
     }
     ff.close();
+	cout <<"mutation scalar " << mut_scalar<<endl;
 }
 
 
@@ -357,32 +332,24 @@ void tracer::hotspot_prob_b(string bFile, string sav_str)
 
 /* pFlow_pruning_gen
  *
- * input: string ref_trace_dir: real trace directory
- * 	  string genIDtrace: place to put id trace
- * 	  string genLocTrace:place to put generated trace
+ * input: string trace_root_dir: target directory
  *
  * function_brief:
  * wrapper function for generate localized traces
  */
-void tracer::pFlow_pruning_gen(string trace_root_dir)
-{
+void tracer::pFlow_pruning_gen(string trace_root_dir) {
     // get the flow info count
     fs::path dir(trace_root_dir + "/Trace_Generate");
-    if (fs::create_directory(dir))
-    {
+    if (fs::create_directory(dir)) {
         cout<<"creating: " << dir.string()<<endl;
-    }
-    else
-    {
+    } else {
         cout<<"exitst: "<<dir.string()<<endl;
     }
 
     unordered_set<addr_5tup> flowInfo;
-    if (flowInfoFile_str != "")
-    {
+    if (flowInfoFile_str != "") {
         ifstream infile(flowInfoFile_str.c_str());
-        for (string str; getline(infile, str);)
-        {
+        for (string str; getline(infile, str);) {
             addr_5tup packet(str, false);
             if (packet.timestamp > terminT)
                 break;
@@ -390,20 +357,16 @@ void tracer::pFlow_pruning_gen(string trace_root_dir)
         }
         infile.close();
         cout << "read flow info successful" <<endl;
-    }
-    else
+    } else
         flowInfo = flow_arr_mp("./para_src/flow_info");
 
     // trace generated in format of  "trace-200k-0.05-20"
     stringstream ss;
     ss<<dir.string()<<"/trace-"<<flow_rate<<"k-"<<cold_prob<<"-"<<hotspot_no;
     fs::path son_dir(ss.str());
-    if (fs::create_directory(son_dir))
-    {
+    if (fs::create_directory(son_dir)) {
         cout<<"creating: "<<son_dir.string()<<endl;
-    }
-    else
-    {
+    } else {
         cout<<"exitst: "<<son_dir.string()<<endl;
     }
     // prune and gen file
@@ -420,11 +383,9 @@ void tracer::pFlow_pruning_gen(string trace_root_dir)
  * function_brief:
  * prune the headers according arrival, and map the headers
  */
-void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo, fs::path gen_trace_dir) const
-{
+void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo, fs::path gen_trace_dir) const {
     std::multimap<double, addr_5tup> ts_prune_map;
-    for (unordered_set<addr_5tup>::iterator iter=flowInfo.begin(); iter != flowInfo.end(); ++iter)
-    {
+    for (unordered_set<addr_5tup>::iterator iter=flowInfo.begin(); iter != flowInfo.end(); ++iter) {
         ts_prune_map.insert(std::make_pair(iter->timestamp, *iter));
     }
     cout << "total flow no. : " << ts_prune_map.size() <<endl;
@@ -432,11 +393,9 @@ void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo, fs::path gen
     // prepair hot spots
     list<h_rule> hotspot_queue;
     ifstream in (hotcandi_str);
-    for (uint32_t i = 0; i < hotspot_no; i++)
-    {
+    for (uint32_t i = 0; i < hotspot_no; i++) {
         string line;
-        if (!getline(in, line))
-        {
+        if (!getline(in, line)) {
             in.clear();
             in.seekg(0, std::ios::beg);
         }
@@ -456,23 +415,17 @@ void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo, fs::path gen
 
     double nextKickOut = offset + hotvtime;
 
-    for (auto iter = ts_prune_map.begin(); iter != ts_prune_map.end(); ++iter)
-    {
-        if (iter->first > next_checkpoint)
-        {
+    for (auto iter = ts_prune_map.begin(); iter != ts_prune_map.end(); ++iter) {
+        if (iter->first > next_checkpoint) {
             random_shuffle(header_buf.begin(), header_buf.end());
             uint32_t i = 0 ;
-            for (i = 0; i < flow_thres && i < header_buf.size(); ++i)
-            {
+            for (i = 0; i < flow_thres && i < header_buf.size(); ++i) {
                 addr_5tup header;
-                if ((double) rand() /RAND_MAX < (1-cold_prob))
-                {
+                if ((double) rand() /RAND_MAX < (1-cold_prob)) {
                     auto q_iter = hotspot_queue.begin();
                     advance(q_iter, rand()%hotspot_no);
                     header = q_iter->gen_header();
-                }
-                else
-                {
+                } else {
                     header = rList->list[(rand()%(rList->list.size()))].get_random();
                 }
                 pruned_map.insert( std::make_pair(header_buf[i], std::make_pair(id, header)));
@@ -484,13 +437,11 @@ void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo, fs::path gen
         }
         header_buf.push_back(iter->second);
 
-        if (iter->first > nextKickOut)
-        {
+        if (iter->first > nextKickOut) {
             //ff<<hotspot_queue.front().get_str()<<"\t"<<iter->first<<endl;
             hotspot_queue.pop_front();
             string line;
-            if (!getline(in, line))
-            {
+            if (!getline(in, line)) {
                 in.clear();
                 in.seekg(0, std::ios::beg);
                 getline(in, line);
@@ -513,13 +464,11 @@ void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo, fs::path gen
     vector< std::future<void> > results_exp;
     vector< fs::path> to_proc_files = get_proc_files(ref_trace_dir_str);
 
-    for(uint32_t file_id = 0; file_id < to_proc_files.size(); ++file_id)
-    {
+    for(uint32_t file_id = 0; file_id < to_proc_files.size(); ++file_id) {
         results_exp.push_back(std::async(std::launch::async, &tracer::f_pg_st, this, to_proc_files[file_id], file_id, gen_trace_dir.string(), &pruned_map));
     }
 
-    for (uint32_t file_id = 0; file_id < to_proc_files.size(); ++file_id)
-    {
+    for (uint32_t file_id = 0; file_id < to_proc_files.size(); ++file_id) {
         results_exp[file_id].get();
     }
 
@@ -532,8 +481,7 @@ void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo, fs::path gen
 }
 
 
-void tracer::f_pg_st(fs::path ref_file, uint32_t id, string gen_trace_dir, boost::unordered_map<addr_5tup, pair<uint32_t, addr_5tup> > * map_ptr) const
-{
+void tracer::f_pg_st(fs::path ref_file, uint32_t id, string gen_trace_dir, boost::unordered_map<addr_5tup, pair<uint32_t, addr_5tup> > * map_ptr) const {
     cout << "Processing " << ref_file.c_str() << endl;
     io::filtering_istream in;
     in.push(io::gzip_decompressor());
@@ -556,12 +504,10 @@ void tracer::f_pg_st(fs::path ref_file, uint32_t id, string gen_trace_dir, boost
     out_loc.push(outfile_gen);
     out_loc.precision(15);
 
-    for (string str; getline(in, str); )
-    {
+    for (string str; getline(in, str); ) {
         addr_5tup packet (str); // readable;
         auto iter = map_ptr->find(packet);
-        if (iter != map_ptr->end())
-        {
+        if (iter != map_ptr->end()) {
             packet.copy_header(iter->second.second);
             //packet = iter->second.second;
             //packet.timestamp = iter->first.timestamp;
@@ -583,35 +529,28 @@ void tracer::f_pg_st(fs::path ref_file, uint32_t id, string gen_trace_dir, boost
  * function_brief:
  * obtain the first packet of each flow for later flow based pruning
  */
-boost::unordered_set<addr_5tup> tracer::flow_arr_mp(string flow_info_str) const
-{
+boost::unordered_set<addr_5tup> tracer::flow_arr_mp(string flow_info_str) const {
     vector<fs::path> to_proc_files = get_proc_files(ref_trace_dir_str);
     cout << "Processing ... To process trace files " << to_proc_files.size() << endl;
     // process using multi-thread;
     vector< std::future<boost::unordered_set<addr_5tup> > > results_exp;
-    for (uint32_t file_id = 0; file_id < to_proc_files.size(); file_id++)
-    {
+    for (uint32_t file_id = 0; file_id < to_proc_files.size(); file_id++) {
         results_exp.push_back(std::async(std::launch::async, &tracer::f_arr_st, this, to_proc_files[file_id]));
     }
     vector< boost::unordered_set<addr_5tup> >results;
-    for (uint32_t file_id = 0; file_id < to_proc_files.size(); file_id++)
-    {
+    for (uint32_t file_id = 0; file_id < to_proc_files.size(); file_id++) {
         boost::unordered_set<addr_5tup> res = results_exp[file_id].get();
         results.push_back(res);
     }
 
     // merge the results;
     boost::unordered_set<addr_5tup> flowInfo_set;
-    for (uint32_t file_id = 0; file_id < to_proc_files.size(); file_id++)
-    {
+    for (uint32_t file_id = 0; file_id < to_proc_files.size(); file_id++) {
         boost::unordered_set<addr_5tup> res = results[file_id];
-        for ( boost::unordered_set<addr_5tup>::iterator iter = res.begin(); iter != res.end(); iter++)
-        {
+        for ( boost::unordered_set<addr_5tup>::iterator iter = res.begin(); iter != res.end(); iter++) {
             auto ist_res = flowInfo_set.insert(*iter);
-            if (!ist_res.second)   // update timestamp;
-            {
-                if (iter->timestamp < ist_res.first->timestamp)
-                {
+            if (!ist_res.second) { // update timestamp;
+                if (iter->timestamp < ist_res.first->timestamp) {
                     addr_5tup rec = *ist_res.first;
                     rec.timestamp = iter->timestamp;
                     flowInfo_set.insert(rec);
@@ -623,8 +562,7 @@ boost::unordered_set<addr_5tup> tracer::flow_arr_mp(string flow_info_str) const
     // print the results;
     ofstream outfile(flow_info_str);
     outfile.precision(15);
-    for (boost::unordered_set<addr_5tup>::iterator iter = flowInfo_set.begin(); iter != flowInfo_set.end(); ++iter)
-    {
+    for (boost::unordered_set<addr_5tup>::iterator iter = flowInfo_set.begin(); iter != flowInfo_set.end(); ++iter) {
         outfile<< iter->str_easy_RW() <<endl;
     }
     outfile.close();
@@ -638,16 +576,14 @@ boost::unordered_set<addr_5tup> tracer::flow_arr_mp(string flow_info_str) const
  * function_brief:
  * single thread process of flow_arr_mp
  */
-boost::unordered_set<addr_5tup> tracer::f_arr_st(fs::path ref_file) const
-{
+boost::unordered_set<addr_5tup> tracer::f_arr_st(fs::path ref_file) const {
     cout<<"Procssing " << ref_file.c_str() << endl;
     boost::unordered_set<addr_5tup> partial_flow_rec;
     io::filtering_istream in;
     in.push(io::gzip_decompressor());
     ifstream infile(ref_file.c_str());
     in.push(infile);
-    for (string str; getline(in, str); )
-    {
+    for (string str; getline(in, str); ) {
         addr_5tup packet(str); // readable
         if (packet.timestamp > terminT)
             break;
@@ -666,8 +602,7 @@ boost::unordered_set<addr_5tup> tracer::f_arr_st(fs::path ref_file) const
  * function brief
  * counting the packets for each flow using multi-thread
  */
-void tracer::packet_count_mp(string real_trace_dir, string packet_count_file)
-{
+void tracer::packet_count_mp(string real_trace_dir, string packet_count_file) {
     fs::path dir(real_trace_dir);
     fs::directory_iterator end;
     boost::unordered_map<addr_5tup, uint32_t> packet_count_map;
@@ -675,13 +610,10 @@ void tracer::packet_count_mp(string real_trace_dir, string packet_count_file)
     mutex mtx;
     atomic_uint thr_n(0);
     atomic_bool reachend(false);
-    if (fs::exists(dir) && fs::is_directory(dir))
-    {
+    if (fs::exists(dir) && fs::is_directory(dir)) {
         fs::directory_iterator iter(dir);
-        while (iter != end)
-        {
-            if ((!reachend) && fs::is_regular_file(iter->status()))   // create thread
-            {
+        while (iter != end) {
+            if ((!reachend) && fs::is_regular_file(iter->status())) { // create thread
                 std::thread (&tracer::p_count_st, this, iter->path(), &thr_n, &mtx, &packet_count_map, &reachend).detach();
                 thr_n++;
             }
@@ -701,8 +633,7 @@ void tracer::packet_count_mp(string real_trace_dir, string packet_count_file)
     // debug
     uint32_t dbtotal = 0;
     ofstream ff(packet_count_file);
-    for(Map_iter iter = packet_count_map.begin(); iter != packet_count_map.end(); iter++)
-    {
+    for(Map_iter iter = packet_count_map.begin(); iter != packet_count_map.end(); iter++) {
         ff<<iter->first.str_easy_RW()<<"\t"<<iter->second<<endl;
         dbtotal+=iter->second;
     }
@@ -723,22 +654,18 @@ void tracer::packet_count_mp(string real_trace_dir, string packet_count_file)
  * function brief
  * this is the thread function that produce packet counts
  */
-void tracer::p_count_st(const fs::path gz_file_ptr, atomic_uint * thr_n_ptr, mutex * mtx, boost::unordered_map<addr_5tup, uint32_t> * pc_map_ptr, atomic_bool * reachend_ptr)
-{
+void tracer::p_count_st(const fs::path gz_file_ptr, atomic_uint * thr_n_ptr, mutex * mtx, boost::unordered_map<addr_5tup, uint32_t> * pc_map_ptr, atomic_bool * reachend_ptr) {
     cout<<"Processing:"<<gz_file_ptr.c_str()<<endl;
     uint32_t counter = 0;
     boost::unordered_map<addr_5tup, uint32_t> packet_count_map;
-    try
-    {
+    try {
         io::filtering_istream in;
         in.push(io::gzip_decompressor());
         ifstream infile(gz_file_ptr.c_str());
         in.push(infile);
-        for (string str; getline(in, str); )
-        {
+        for (string str; getline(in, str); ) {
             addr_5tup packet(str);
-            if (packet.timestamp > terminT)
-            {
+            if (packet.timestamp > terminT) {
                 (*reachend_ptr) = true;
                 break;
             }
@@ -750,9 +677,7 @@ void tracer::p_count_st(const fs::path gz_file_ptr, atomic_uint * thr_n_ptr, mut
 
         }
         io::close(in);
-    }
-    catch (const io::gzip_error & e)
-    {
+    } catch (const io::gzip_error & e) {
         cout<<e.what()<<std::endl;
     }
 
@@ -760,8 +685,7 @@ void tracer::p_count_st(const fs::path gz_file_ptr, atomic_uint * thr_n_ptr, mut
 
     std::lock_guard<mutex> lock(*mtx);
 
-    for (Map_iter iter = packet_count_map.begin(); iter != packet_count_map.end(); iter++)
-    {
+    for (Map_iter iter = packet_count_map.begin(); iter != packet_count_map.end(); iter++) {
         auto result = pc_map_ptr->insert(*iter);
         if (!result.second)
             (pc_map_ptr->find(iter->first))->second += iter->second;
@@ -775,8 +699,7 @@ void tracer::p_count_st(const fs::path gz_file_ptr, atomic_uint * thr_n_ptr, mut
  *
  * function brief: test how many files are hit by generated trace
  */
-void tracer::printTestTrace(string tracefile)
-{
+void tracer::printTestTrace(string tracefile) {
     io::filtering_istream ref_trace_stream;
     ref_trace_stream.push(io::gzip_decompressor());
     ifstream ref_trace_file(tracefile);
@@ -789,23 +712,19 @@ void tracer::printTestTrace(string tracefile)
     boost::unordered_set<addr_5tup> flow_rec;
     //uint32_t counter = 0;
 
-    for (string str; getline(ref_trace_stream, str); )
-    {
+    for (string str; getline(ref_trace_stream, str); ) {
         addr_5tup packet(str, false);
         //counter++;
         //if (counter < 10)
         //	cout<<packet.str_readable()<<endl;
         //else
         //	return;
-        if (packet.timestamp > checkpoint)
-        {
+        if (packet.timestamp > checkpoint) {
             cout<< "reached "<<checkpoint<<endl;
             checkpoint+=win;
             flow_rec_vec.push_back(flow_rec);
             flow_rec.clear();
-        }
-        else
-        {
+        } else {
             header_rec.insert(packet.addrs[0]);
             header_rec.insert(packet.addrs[1]);
             flow_rec.insert(packet);
@@ -814,20 +733,16 @@ void tracer::printTestTrace(string tracefile)
     io::close(ref_trace_stream);
 
     set<uint32_t> hitrule_rec;
-    for (uint32_t i = 0; i<flow_rec_vec.size(); i++)
-    {
+    for (uint32_t i = 0; i<flow_rec_vec.size(); i++) {
         stringstream ss;
         ss<<"./TracePruning/TestPlot/snapshot"<<i;
         ofstream ff (ss.str().c_str());
-        for (boost::unordered_set<addr_5tup>::iterator iter=flow_rec_vec[i].begin(); iter != flow_rec_vec[i].end(); iter++)
-        {
+        for (boost::unordered_set<addr_5tup>::iterator iter=flow_rec_vec[i].begin(); iter != flow_rec_vec[i].end(); iter++) {
             uint32_t src = distance(header_rec.begin(), header_rec.find(iter->addrs[0]));
             uint32_t dst = distance(header_rec.begin(), header_rec.find(iter->addrs[1]));
             ff<<src<<"\t"<<dst<<endl;
-            for (uint32_t j = 0; j < rList->list.size(); j++)
-            {
-                if (rList->list[j].packet_hit(*iter))
-                {
+            for (uint32_t j = 0; j < rList->list.size(); j++) {
+                if (rList->list[j].packet_hit(*iter)) {
                     hitrule_rec.insert(j);
                     break;
                 }
@@ -838,472 +753,3 @@ void tracer::printTestTrace(string tracefile)
     cout << hitrule_rec.size() << " rules are hit"<<endl;
 }
 
-// single thread deprecated function
-// ============================================================================
-// ============================================================================
-//
-void tracer::pruning_trace(string real_trace_dir, string packet_count_file, string gen_trace_file)
-{
-    // read and pruning header
-    ifstream pack_count(packet_count_file);
-    vector<pair<addr_5tup, uint32_t> > header_shuffler;
-    boost::unordered_map<addr_5tup, uint32_t> pruned_map;
-
-    const uint32_t noise_thres = 10;
-    const uint32_t bulk_thres = 0.1*duration*data_rate;
-
-    uint32_t total_packet_count = 0;
-    for ( string str; getline(pack_count, str); )
-    {
-        vector<string> temp;
-        boost::split(temp, str, boost::is_any_of("\t"));
-        uint32_t count = boost::lexical_cast<uint32_t>(temp[1]);
-        if (count < noise_thres || count > bulk_thres)
-            continue;
-        header_shuffler.push_back(std::make_pair(addr_5tup(temp[0], false), count));
-        total_packet_count += count;
-    }
-
-    if (total_packet_count < duration*data_rate)
-    {
-        cout<<"not enough packet, Max rate: "<< total_packet_count/duration <<endl;
-        return;
-    }
-
-    random_shuffle(header_shuffler.begin(), header_shuffler.end());
-
-    cout <<"finish shuffle"<<endl;
-    total_packet_count = 0;
-    uint32_t trial = 0;
-    uint32_t MaxPacket = duration*data_rate;
-    uint32_t flowID = 0;
-    for (auto iter = header_shuffler.begin(); iter != header_shuffler.end(); iter++)
-    {
-        if (total_packet_count + iter->second > MaxPacket)
-        {
-            trial++;
-            if (trial > 3)
-                break;
-            continue;
-        }
-        else
-        {
-            pruned_map.insert(std::make_pair(iter->first, flowID));
-            total_packet_count += iter->second;
-            ++flowID;
-            trial = 0;
-        }
-    }
-    flow_no =  pruned_map.size();
-    // cout << "flowNo. " << flowID << ":" << flow_no << endl;
-    // cout << "packet No. "<<total_packet_count <<endl;
-    assert(flowID == flow_no);
-    // prune the trace
-    io::filtering_ostream out;
-    out.push(io::gzip_compressor());
-    ofstream outfile(gen_trace_file);
-    out.push(outfile);
-
-
-    fs::path dir(real_trace_dir);
-    fs::directory_iterator end;
-    bool reachend = false;
-    if (fs::exists(dir) && fs::is_directory(dir))
-    {
-        for (fs::directory_iterator iter(dir); (iter != end)&&(!reachend); ++iter)
-        {
-            if (fs::is_regular_file(iter->status()))
-            {
-                cout<<"Processing:"<<iter->path()<<endl;
-                try
-                {
-                    io::filtering_istream in;
-                    in.push(io::gzip_decompressor());
-                    ifstream infile(iter->path().c_str());
-                    in.push(infile);
-
-                    for (string str; getline(in, str); )
-                    {
-                        addr_5tup packet(str);
-                        if (packet.timestamp > terminT)
-                        {
-                            reachend = true;
-                            break;
-                        }
-                        Map_iter h_iter = pruned_map.find(packet);
-                        if (h_iter != pruned_map.end())
-                        {
-                            out<<packet.timestamp<<"\t"<<h_iter->second<<endl;
-                        }
-                    }
-                    io::close(in); // careful
-                }
-                catch (const io::gzip_error & e)
-                {
-                    cout<<e.what()<<std::endl;
-                }
-            }
-        }
-    }
-    io::close(out);
-}
-
-
-void tracer::packet_count(string real_trace_dir, string packet_count_file)
-{
-    // measure the packets for each flow
-    fs::path dir(real_trace_dir);
-    fs::directory_iterator end;
-    boost::unordered_map<addr_5tup, uint32_t> packet_count_map;
-    uint32_t total_packet_count = 0;
-    bool reachend = false;
-    if (fs::exists(dir) && fs::is_directory(dir))
-    {
-        for (fs::directory_iterator iter(dir); (iter != end)&&(!reachend); ++iter)
-        {
-            if (fs::is_regular_file(iter->status()))
-            {
-                cout<<"Processing:"<<iter->path()<<endl;
-                try
-                {
-                    io::filtering_istream in;
-                    in.push(io::gzip_decompressor());
-                    ifstream infile(iter->path().c_str());
-                    in.push(infile);
-                    for (string str; getline(in, str); )
-                    {
-                        addr_5tup packet(str);
-                        if (packet.timestamp > terminT)
-                        {
-                            reachend = true;
-                            break;
-                        }
-
-                        total_packet_count++;
-                        auto result = packet_count_map.insert(std::make_pair(packet, 1));
-                        if (!result.second)
-                            result.first->second = result.first->second + 1;
-
-                    }
-                    io::close(in); // careful
-                }
-                catch (const io::gzip_error & e)
-                {
-                    cout<<e.what()<<std::endl;
-                }
-
-            }
-        }
-    }
-
-    // debug
-    uint32_t dbtotal = 0;
-    ofstream ff(packet_count_file);
-    for(Map_iter iter = packet_count_map.begin(); iter != packet_count_map.end(); iter++)
-    {
-        ff<<iter->first.str_easy_RW()<<"\t"<<iter->second<<endl;
-        dbtotal+=iter->second;
-    }
-    cout<<dbtotal<<endl;
-    ff.close();
-    return;
-}
-
-
-void tracer::gen_random_trace(string ref_trace, string gen_trace)
-{
-    fs::path ref_trace_path(ref_trace);
-    if (!(fs::exists(ref_trace_path) && fs::is_regular_file(ref_trace_path)))
-    {
-        cout<<"Missing Ref file"<<endl;
-        return;
-    }
-
-    uint32_t rListLen = rList->list.size();
-    vector<addr_5tup> checkform;
-    checkform.reserve(flow_no);
-    boost::unordered_set<addr_5tup> u_headers;
-
-    addr_5tup pack;
-    for (uint32_t i = 0; i < flow_no; i++)
-    {
-        do
-        {
-            pack = rList->list[(rand()%rListLen)].get_random();
-        }
-        while(u_headers.find(pack) != u_headers.end());
-        u_headers.insert(pack);
-        checkform.insert(checkform.end(), pack); // append
-    }
-
-    // generate the substituted traces
-    io::filtering_istream ref_trace_stream;
-    ref_trace_stream.push(io::gzip_compressor());
-    ifstream ref_trace_file(ref_trace);
-    ref_trace_stream.push(ref_trace_file);
-
-    io::filtering_ostream gen_trace_stream;
-    gen_trace_stream.push(io::gzip_compressor());
-    ofstream gen_trace_file(gen_trace);
-    gen_trace_file.precision(16);
-    gen_trace_stream.push(gen_trace_file);
-
-    for (string str; getline(ref_trace_stream, str); )
-    {
-        vector<string> temp;
-        boost::split(temp, str, boost::is_any_of("\t"));
-        uint32_t id = boost::lexical_cast<uint32_t>(temp[1]);
-        checkform[id].timestamp = boost::lexical_cast<double>(temp[0]);
-        gen_trace_stream << checkform[id].str_easy_RW() << endl;
-    }
-}
-
-/*
-void tracer::set_para( double d_rate, double dur, uint32_t f_no){
-	data_rate = d_rate;
-	duration = dur;
-	terminT = duration + offset;
-	flow_no = f_no;
-}
-*/
-void tracer::p_trace_st(fs::path gz_file_ptr, string gen_trace_str, atomic_uint * thr_n_ptr, boost::unordered_map<addr_5tup, uint32_t> * pc_map_ptr, atomic_bool * reachend)
-{
-    cout<<"Processing:"<<gz_file_ptr.c_str()<<endl;
-    cout<<"output"<<gen_trace_str<<endl;
-    try
-    {
-        io::filtering_istream in;
-        in.push(io::gzip_decompressor());
-        ifstream infile(gz_file_ptr.c_str());
-        in.push(infile);
-        io::filtering_ostream out;
-        out.push(io::gzip_compressor());
-        ofstream outfile(gen_trace_str);
-        out.push(outfile);
-        for (string str; getline(in, str); )
-        {
-            addr_5tup packet(str);
-            if (packet.timestamp > terminT)
-            {
-                (*reachend) = true;
-                break;
-            }
-            Map_iter h_iter = pc_map_ptr->find(packet);
-            if (h_iter != pc_map_ptr->end())
-            {
-                out<<packet.timestamp<<"\t"<<h_iter->second<<endl;
-            }
-
-        }
-        io::close(in);
-        io::close(out);
-    }
-    catch (const io::gzip_error & e)
-    {
-        cout<<e.what()<<std::endl;
-    }
-    cout<<"Terminates:"<<gz_file_ptr.c_str()<<endl;
-    --(*thr_n_ptr);
-}
-
-void tracer::pruning_trace_mp(string real_trace_dir, string packet_count_file, string gen_trace_file)
-{
-    // read and pruning header
-    ifstream pack_count(packet_count_file);
-    vector<pair<addr_5tup, uint32_t> > header_shuffler;
-    boost::unordered_map<addr_5tup, uint32_t> pruned_map;
-
-    const uint32_t noise_thres = 10;
-    const uint32_t bulk_thres = 0.1*duration*data_rate;
-
-    total_packet = 0;
-    for ( string str; getline(pack_count, str); )
-    {
-        vector<string> temp;
-        boost::split(temp, str, boost::is_any_of("\t"));
-        uint32_t count = boost::lexical_cast<uint32_t>(temp[1]);
-        if (count < noise_thres || count > bulk_thres)
-            continue;
-        header_shuffler.push_back(std::make_pair(addr_5tup(temp[0], false), count));
-        total_packet += count;
-    }
-
-    uint32_t MaxPacket = duration*data_rate;
-    if (total_packet < MaxPacket)
-    {
-        cout<<"not enough packet, Max rate: "<< total_packet/duration <<endl;
-        return;
-    }
-
-    random_shuffle(header_shuffler.begin(), header_shuffler.end());
-    cout <<"finish shuffle"<<endl;
-
-    total_packet = 0;
-    uint32_t trial = 0;
-    uint32_t flowID = 0;
-    for (auto iter = header_shuffler.begin(); iter != header_shuffler.end(); iter++)
-    {
-        if (total_packet + iter->second > MaxPacket)
-        {
-            trial++;
-            if (trial > 3)
-                break;
-            continue;
-        }
-        else
-        {
-            pruned_map.insert(std::make_pair(iter->first, flowID));
-            total_packet += iter->second;
-            ++flowID;
-            trial = 0;
-        }
-    }
-    flow_no =  pruned_map.size();
-    assert(flowID == flow_no);
-
-    // prune the trace
-    fs::path dir(real_trace_dir);
-    fs::directory_iterator end;
-    uint32_t cpu_count = count_proc()*2;
-    atomic_bool reachend(false);
-    atomic_uint thr_n(0);
-    uint32_t file_id = 0;
-    if (fs::exists(dir) && fs::is_directory(dir))
-    {
-        fs::directory_iterator iter(dir);
-        while (iter != end)
-        {
-            if ((!reachend) && fs::is_regular_file(iter->status()))
-            {
-                stringstream ss;
-                ss<<gen_trace_file<<"-"<<file_id++;
-                thread (&tracer::p_trace_st, this, iter->path(), ss.str(), &thr_n, &pruned_map, &reachend).detach();
-                thr_n++;
-            }
-            iter++;
-
-            while (thr_n >= cpu_count)
-                std::this_thread::yield();
-            while (thr_n > 0 && iter == end)
-                std::this_thread::yield();
-        }
-    }
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-}
-
-
-
-
-
-void tracer::gen_local_trace(string ref_trace_dir, string gen_trace, string hotspot_candi_file)
-{
-    list<h_rule> hotspot_queue;
-    ifstream in (hotspot_candi_file);
-    for (uint32_t i = 0; i < hotspot_no; i++)
-    {
-        string line;
-        if (!getline(in, line))
-        {
-            in.clear();
-            in.seekg(0, std::ios::beg);
-        }
-        h_rule hr(line, rList->list);
-        hotspot_queue.push_back(hr);
-    }
-    boost::unordered_map<uint32_t, addr_5tup> checkform;
-    boost::unordered_set<addr_5tup> u_headers;
-
-    // generate the substituted traces
-    io::filtering_ostream gen_trace_stream;
-    gen_trace_stream.push(io::gzip_compressor());
-    ofstream gen_trace_file(gen_trace);
-    gen_trace_file.precision(16);
-    gen_trace_stream.push(gen_trace_file);
-
-    double nextKickOut = hotvtime;
-
-    fs::path dir(ref_trace_dir);
-    fs::directory_iterator end;
-    bool reachend = false;
-    uint32_t file_no=0;
-    string filePref = "";
-    if (fs::exists(dir) && fs::is_directory(dir))
-    {
-        for (fs::directory_iterator f_iter(dir); (f_iter != end)&&(!reachend); ++f_iter)
-        {
-            if (fs::is_regular_file(f_iter->status()))
-            {
-                ++file_no;
-                if (!filePref.compare(""))
-                    filePref = f_iter->path().string();
-            }
-        }
-    }
-
-    filePref.erase(filePref.size()-1);
-    for (uint32_t i = 0; i < file_no; i++)
-    {
-        stringstream ss;
-        ss<<filePref<<i;
-        cout<<"Processing:"<< ss.str() <<endl;
-        try
-        {
-            io::filtering_istream ref_trace_stream;
-            ref_trace_stream.push(io::gzip_decompressor());
-            ifstream ref_trace_file(ss.str().c_str());
-            ref_trace_stream.push(ref_trace_file);
-            for (string str; getline(ref_trace_stream, str); )
-            {
-                vector<string> temp;
-                boost::split(temp, str, boost::is_any_of("\t"));
-                uint32_t id = boost::lexical_cast<uint32_t>(temp[1]);
-                if (checkform.find(id) == checkform.end())   // not found
-                {
-                    addr_5tup pack;
-                    if ((double) rand() / RAND_MAX < (1-cold_prob))   // hot
-                    {
-                        do
-                        {
-                            list<h_rule>::iterator q_iter = hotspot_queue.begin();
-                            advance(q_iter, rand()%hotspot_no);
-                            pack = q_iter->gen_header();
-                        }
-                        while(u_headers.find(pack) != u_headers.end());
-                    }
-                    else     // cold
-                    {
-                        do
-                        {
-                            pack = rList->list[(rand()%(rList->list.size()))].get_random();
-                        }
-                        while(u_headers.find(pack) != u_headers.end());
-                    }
-                    checkform[id] = pack;
-                }
-                checkform[id].timestamp = boost::lexical_cast<double>(temp[0]);
-                gen_trace_stream << checkform[id].str_easy_RW() << endl;
-
-                if (checkform[id].timestamp > nextKickOut)
-                {
-                    hotspot_queue.pop_front();
-                    string line;
-                    if (!getline(in, line))   // eof
-                    {
-                        in.clear();
-                        in.seekg(0, std::ios::beg);
-                        getline(in, line);
-                    }
-                    h_rule hr(line, rList->list);
-                    hotspot_queue.push_back(hr);
-                    nextKickOut += hotvtime;
-                }
-            }
-            io::close(ref_trace_stream);
-        }
-        catch (const io::gzip_error & e)
-        {
-            cout<<e.what()<<std::endl;
-        }
-    }
-    io::close(gen_trace_stream);
-}
