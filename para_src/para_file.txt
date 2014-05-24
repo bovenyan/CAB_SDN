@@ -8,5 +8,6 @@ hr_thres	10
 h_candi_no	200
 he_count	../para_src/flow_info
 ref_t	/mnt/hgfs/VMshared/traces
+hot_ref	../para_src/tree_pr.dat
 hot_c	../para_src/hotspot.dat
-mutate_scalar	8 1
+mutate_scalar	4 1

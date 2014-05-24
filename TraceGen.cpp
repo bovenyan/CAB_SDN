@@ -85,13 +85,9 @@ void tracer::set_para(string loc_para_str) {
         if (!temp[0].compare("he_count")) {
             flowInfoFile_str = temp[1];
         }
-        if (!temp[0].compare("h_scope")) {
-            vector<string> temp1;
-            boost::split(temp1, temp[1], boost::is_any_of(" "));
-            for (uint32_t i = 0; i < 4; i++) {
-                scope[i] = boost::lexical_cast<uint32_t>(temp1[i]);
-            }
-        }
+	if (!temp[0].compare("hot_ref")){
+		hotspot_ref = temp[1];
+	}
 	if (!temp[0].compare("mutate_scalar")){
 		vector<string> temp1;
             	boost::split(temp1, temp[1], boost::is_any_of(" "));
@@ -289,14 +285,18 @@ void tracer::hotspot_prob(string sav_str) {
  * function brief:
  * generate the hotspot candidate with some reference file and put them into a candidate file for later header mapping
  */
-void tracer::hotspot_prob_b(string bFile, bool mutation) {
+void tracer::hotspot_prob_b(bool mutation) {
     uint32_t hs_count = 0;
     if (mutation)
 	    hotcandi_str += "_m";
     ofstream ff (hotcandi_str);
     vector <string> file;
-    ifstream in (bFile);
+    ifstream in (hotspot_ref);
+    
     cout << "hot_rule_thres " << hot_rule_thres <<endl;
+    if (mutation)
+    	cout <<"mutation scalar " << mut_scalar[0] << " " << mut_scalar[1] << endl;
+
     for (string str; getline(in, str); ) {
         vector<string> temp;
         boost::split(temp, str, boost::is_any_of("\t"));
@@ -324,7 +324,7 @@ void tracer::hotspot_prob_b(string bFile, bool mutation) {
         ++hs_count;
     }
     ff.close();
-	cout <<"mutation scalar " << mut_scalar<<endl;
+
 }
 
 
@@ -372,7 +372,6 @@ void tracer::pFlow_pruning_gen(string trace_root_dir) {
     // prune and gen file
     flow_pruneGen_mp(flowInfo, son_dir);
 }
-
 
 
 /* flow_pruneGen_mp

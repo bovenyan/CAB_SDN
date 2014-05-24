@@ -54,6 +54,7 @@ private:
     double terminT;
     atomic_uint total_packet;
     uint32_t mut_scalar[2];
+    string hotspot_ref;
 
     // locality traffic parameter
     string flowInfoFile_str;
@@ -76,7 +77,7 @@ public:
     void merge_files(string) const;
 
     void hotspot_prob(string);
-    void hotspot_prob_b(string, bool = false);
+    void hotspot_prob_b(bool = false);
 
     // trace generation and evaluation
     void pFlow_pruning_gen(string);

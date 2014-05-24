@@ -8,6 +8,7 @@
 #include <cmath>
 #include <list>
 #include <set>
+#include <deque>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/filesystem.hpp>
@@ -17,31 +18,36 @@ using std::pair;
 using std::set;
 using std::string;
 using std::ofstream;
+using std::deque;
+using std::map;
 
 class bucket: public b_rule {
   private:
-    static boost::log::sources::severity_logger <boost::log::trivial::severity_level> lg;
+    static boost::log::sources::logger lg;
     static void logger_init();
+
   public:
     vector<bucket*> sonList; 		// List of son nodes
     vector<uint32_t> related_rules;	// IDs of related rules in the bucket
     uint32_t cutArr[4];			// how does this node is cut.  e.g. [2,3,0,0] means 2 cuts on dim 0, 3 cuts on dim 1
     bool hit;
+    bucket * parent;
 
   public:
     bucket();
     bucket(const bucket &);
     bucket(const string &, const rule_list *);
     pair<double, size_t> split(const vector<size_t> &, rule_list *);
-    int reSplit(const vector<size_t> &, rule_list *);
+    int reSplit(const vector<size_t> &, rule_list *, bool);
     vector<size_t> unq_comp(rule_list *);
 
     string get_str() const;
-  private:
     void cleanson();
 };
 
 class bucket_tree {
+  private:
+    boost::log::sources::logger bTree_log;
   public:
     bucket * root;
     rule_list * rList;
@@ -49,6 +55,9 @@ class bucket_tree {
     uint32_t thres_hard;
     uint32_t pa_rule_no;
     set<uint32_t> pa_rules;
+
+    // for debug
+    bool debug;
 
     // HyperCut related
     size_t max_cut_per_layer;
@@ -63,14 +72,9 @@ class bucket_tree {
 
     pair<bucket *, int> search_bucket(const addr_5tup &, bucket* ) const;
     bucket * search_bucket_seri(const addr_5tup &, bucket* ) const;
-    void check_static_hit(const b_rule &, bucket*, set<size_t> &, size_t &) const;
+    void check_static_hit(const b_rule &, bucket*, set<size_t> &, size_t &) ;
     void pre_alloc();
-
     void dyn_adjust();
-
-    void print_tree(const string &, bool = false) const;
-    void search_test(const string &) const;
-    void static_traf_test(const string &);
 
   private:
     // static related
@@ -82,10 +86,18 @@ class bucket_tree {
 
     // dynamic related
     void merge_bucket(bucket*);
-    void repart_bucket_fix(bucket*);
+    void regi_occupancy(bucket*, deque <bucket*> &);
+    void repart_bucket();
 
-    void print_bucket(ofstream &, bucket *, bool) const;
+    void print_bucket(ofstream &, bucket *, bool); // const
+
+  public:
+    // test use
+    void search_test(const string &) ;
+    void static_traf_test(const string &);
+    void print_tree(const string &, bool = false); // const
 
 };
 
 #endif
+

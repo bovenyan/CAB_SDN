@@ -270,18 +270,19 @@ inline bool b_rule::match_truncate(p_rule & rule) const { // truncate a policy r
 }
 
 inline bool b_rule::overlap(const b_rule & br) const {
-	for (uint32_t i = 0; i < 3; ++i)
-		if (!addrs[i].match(br.addrs[i]))
-			return false;
-	return true;
+    for (uint32_t i = 0; i < 4; ++i) {
+        if (!addrs[i].match(br.addrs[i]))
+            return false;
+    }
+    return true;
 }
 
-inline void b_rule::mutate_pred(uint32_t shrink_scale, uint32_t expand_scale){
-	for (uint32_t i = 0; i < 2; ++i)
-		addrs[i].mutate(shrink_scale, expand_scale, false);
-	for (uint32_t i = 2; i < 4; ++i){
-		addrs[i].mutate(shrink_scale/2, expand_scale/2, true);
-	}
+inline void b_rule::mutate_pred(uint32_t shrink_scale, uint32_t expand_scale) {
+    for (uint32_t i = 0; i < 2; ++i)
+        addrs[i].mutate(shrink_scale, expand_scale, false);
+    for (uint32_t i = 2; i < 4; ++i) {
+        addrs[i].mutate(shrink_scale/2, expand_scale/2, true);
+    }
 }
 
 /* debug & print function
@@ -431,4 +432,5 @@ inline addr_5tup h_rule::gen_header() {
 }
 
 #endif
+
 

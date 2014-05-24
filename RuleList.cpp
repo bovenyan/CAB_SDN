@@ -22,6 +22,7 @@ rule_list::rule_list(string & filename) {
         list.push_back(sRule);
         getline(file, sLine);
     }
+    occupancy = vector<size_t>(list.size(), 0);
     file.close();
 }
 
@@ -69,8 +70,10 @@ int rule_list::linear_search(const addr_5tup & packet) {
 }
 
 void rule_list::clearHitFlag() {
-    for (auto iter = list.begin(); iter!=list.end(); ++iter)
-        iter->hit = false;
+    for (size_t idx = 0; idx != list.size(); ++idx) {
+        occupancy[idx] = 0;
+        list[idx].hit = false;
+    }
 }
 
 
@@ -99,5 +102,6 @@ void rule_list::rule_dep_analysis() {
         ff<<endl;
     }
 }
+
 
 
