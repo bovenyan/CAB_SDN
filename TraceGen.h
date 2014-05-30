@@ -62,11 +62,17 @@ private:
     string hotspot_ref;
 
     // locality traffic parameter
-    string flowInfoFile_str;
-    string hotcandi_str;
-    uint32_t scope[4];
-    uint32_t hot_rule_thres;
-    uint32_t hot_candi_no;
+    string flowInfoFile_str;    // first arr time of each flow
+    string hotcandi_str;	// hotspot candi file
+    uint32_t scope[4];		// hotspot probing scope
+    uint32_t hot_rule_thres;	// lower bound for indentify a hot rule
+    uint32_t hot_candi_no;	// number of hot candidate to generate
+
+
+    // sources
+    string trace_root_dir; 	// the root directory to save all traces
+    string gen_trace_dir;	// the directory for generating one specific trace
+    
 
 public:
     tracer();
@@ -111,9 +117,9 @@ public:
      * 8. parse_pack_file_mp(string): process the file from pcap directory and process them into 5tup file
      * 9.p_pf_st(vector<string>): obtain the pcap file in vector<string> and do it.
      */
-    void pFlow_pruning_gen(string);
-    void flow_pruneGen_mp(unordered_set<addr_5tup> &, fs::path) const;
-    void f_pg_st (fs::path, uint32_t, string, boost::unordered_map<addr_5tup, std::pair<uint32_t, addr_5tup> > *) const;
+    void pFlow_pruning_gen();
+    void flow_pruneGen_mp(unordered_set<addr_5tup> &) const;
+    void f_pg_st (fs::path, uint32_t, boost::unordered_map<addr_5tup, std::pair<uint32_t, addr_5tup> > *) const;
     boost::unordered_set<addr_5tup> flow_arr_mp(string) const;
     boost::unordered_set<addr_5tup> f_arr_st (fs::path) const;
     void packet_count_mp(string, string);

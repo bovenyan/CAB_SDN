@@ -434,7 +434,7 @@ void tracer::take_snapshot(string tracefile, double start_time, double interval,
  * function_brief:
  * wrapper function for generate localized traces
  */
-void tracer::pFlow_pruning_gen(string trace_root_dir) {
+void tracer::pFlow_pruning_gen() {
     // get the flow info count
     fs::path dir(trace_root_dir + "/Trace_Generate");
     if (fs::create_directory(dir)) {
@@ -460,8 +460,9 @@ void tracer::pFlow_pruning_gen(string trace_root_dir) {
     // trace generated in format of  "trace-200k-0.05-20"
     stringstream ss;
     ss<<dir.string()<<"/trace-"<<flow_rate<<"k-"<<cold_prob<<"-"<<hotspot_no;
-    fs::path son_dir(ss.str());
-    if (fs::create_directory(son_dir)) {
+    // fs::path son_dir(ss.str());
+    gen_trace_dir = ss.str();
+    if (fs::create_directory()) {
         cout<<"creating: "<<son_dir.string()<<endl;
     } else {
         cout<<"exitst: "<<son_dir.string()<<endl;
@@ -479,7 +480,14 @@ void tracer::pFlow_pruning_gen(string trace_root_dir) {
  * function_brief:
  * prune the headers according arrival, and map the headers
  */
-void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo, fs::path gen_trace_dir) const {
+void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo) const {
+    if (fs::create_directory(fs::path(gen_trace_dir))){
+    	cout<<"creating: "<<gen_trace_dir<<endl;
+    }
+    else{
+    	cout<<"exists:   "<<gen_trace_dir<<endl;
+    }
+
     std::multimap<double, addr_5tup> ts_prune_map;
     for (unordered_set<addr_5tup>::iterator iter=flowInfo.begin(); iter != flowInfo.end(); ++iter) {
         ts_prune_map.insert(std::make_pair(iter->timestamp, *iter));
@@ -551,9 +559,9 @@ void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo, fs::path gen
     cout << "after smoothing, average: " << double(total_header)/duration <<endl;
 
     // process using multi-thread;
-    fs::path temp1(gen_trace_dir.string()+"/IDtrace");
+    fs::path temp1(gen_trace_dir+"/IDtrace");
     fs::create_directory(temp1);
-    fs::path temp2(gen_trace_dir.string()+"/GENtrace");
+    fs::path temp2(gen_trace_dir+"/GENtrace");
     fs::create_directory(temp2);
 
 
@@ -561,7 +569,7 @@ void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo, fs::path gen
     vector< fs::path> to_proc_files = get_proc_files(ref_trace_dir_str);
 
     for(uint32_t file_id = 0; file_id < to_proc_files.size(); ++file_id) {
-        results_exp.push_back(std::async(std::launch::async, &tracer::f_pg_st, this, to_proc_files[file_id], file_id, gen_trace_dir.string(), &pruned_map));
+        results_exp.push_back(std::async(std::launch::async, &tracer::f_pg_st, this, to_proc_files[file_id], file_id, &pruned_map));
     }
 
     for (uint32_t file_id = 0; file_id < to_proc_files.size(); ++file_id) {
@@ -569,15 +577,15 @@ void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo, fs::path gen
     }
 
     cout<< "Merging Files... "<<endl;
-    merge_files(gen_trace_dir.string()+"/IDtrace");
-    merge_files(gen_trace_dir.string()+"/GENtrace");
+    merge_files(gen_trace_dir+"/IDtrace");
+    merge_files(gen_trace_dir+"/GENtrace");
 
     cout<<"Generation Finished. Enjoy :)" << endl;
     return;
 }
 
 
-void tracer::f_pg_st(fs::path ref_file, uint32_t id, string gen_trace_dir, boost::unordered_map<addr_5tup, pair<uint32_t, addr_5tup> > * map_ptr) const {
+void tracer::f_pg_st(fs::path ref_file, uint32_t id, boost::unordered_map<addr_5tup, pair<uint32_t, addr_5tup> > * map_ptr) const {
     cout << "Processing " << ref_file.c_str() << endl;
     io::filtering_istream in;
     in.push(io::gzip_decompressor());
