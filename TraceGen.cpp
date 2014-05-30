@@ -85,15 +85,15 @@ void tracer::set_para(string loc_para_str) {
         if (!temp[0].compare("he_count")) {
             flowInfoFile_str = temp[1];
         }
-	if (!temp[0].compare("hot_ref")){
-		hotspot_ref = temp[1];
-	}
-	if (!temp[0].compare("mutate_scalar")){
-		vector<string> temp1;
-            	boost::split(temp1, temp[1], boost::is_any_of(" "));
-		mut_scalar[0] = boost::lexical_cast<uint32_t>(temp1[0]);
-		mut_scalar[1] = boost::lexical_cast<uint32_t>(temp1[1]);
-	}
+        if (!temp[0].compare("hot_ref")) {
+            hotspot_ref = temp[1];
+        }
+        if (!temp[0].compare("mutate_scalar")) {
+            vector<string> temp1;
+            boost::split(temp1, temp[1], boost::is_any_of(" "));
+            mut_scalar[0] = boost::lexical_cast<uint32_t>(temp1[0]);
+            mut_scalar[1] = boost::lexical_cast<uint32_t>(temp1[1]);
+        }
     }
 }
 
@@ -288,32 +288,32 @@ void tracer::hotspot_prob(string sav_str) {
 void tracer::hotspot_prob_b(bool mutation) {
     uint32_t hs_count = 0;
     if (mutation)
-	    hotcandi_str += "_m";
+        hotcandi_str += "_m";
     ofstream ff (hotcandi_str);
     vector <string> file;
     ifstream in (hotspot_ref);
-    
+
     cout << "hot_rule_thres " << hot_rule_thres <<endl;
     if (mutation)
-    	cout <<"mutation scalar " << mut_scalar[0] << " " << mut_scalar[1] << endl;
+        cout <<"mutation scalar " << mut_scalar[0] << " " << mut_scalar[1] << endl;
 
     for (string str; getline(in, str); ) {
         vector<string> temp;
         boost::split(temp, str, boost::is_any_of("\t"));
         if (boost::lexical_cast<uint32_t>(temp.back()) > hot_rule_thres) {
-		if (mutation){
-			b_rule br(str);
-			br.mutate_pred(mut_scalar[0], mut_scalar[1]);
-			str = br.get_str();
-			size_t assoc_no = 0;
-			for (auto iter = rList->list.begin(); iter != rList->list.end(); ++iter)
-				if (br.match_rule(*iter))
-					++assoc_no;
-			stringstream ss;
-			ss<< str << "\t" << assoc_no;
-			str = ss.str();
-		}
-		file.push_back(str);
+            if (mutation) {
+                b_rule br(str);
+                br.mutate_pred(mut_scalar[0], mut_scalar[1]);
+                str = br.get_str();
+                size_t assoc_no = 0;
+                for (auto iter = rList->list.begin(); iter != rList->list.end(); ++iter)
+                    if (br.match_rule(*iter))
+                        ++assoc_no;
+                stringstream ss;
+                ss<< str << "\t" << assoc_no;
+                str = ss.str();
+            }
+            file.push_back(str);
         }
     }
     random_shuffle(file.begin(), file.end());
@@ -324,9 +324,106 @@ void tracer::hotspot_prob_b(bool mutation) {
         ++hs_count;
     }
     ff.close();
-
 }
 
+
+vector<b_rule> tracer::gen_seed_hotspot(size_t prepare_no, size_t max_rule) {
+    vector<b_rule> gen_traf_block;
+    ifstream in (hotspot_ref);
+    for (string str; getline(in, str); ) {
+        vector<string> temp;
+        boost::split(temp, str, boost::is_any_of("\t"));
+        if (boost::lexical_cast<uint32_t>(temp.back()) > hot_rule_thres) {
+            b_rule br(str);
+            size_t assoc_no = 0;
+            for (auto iter = rList->list.begin(); iter != rList->list.end(); ++iter) {
+                if (br.match_rule(*iter)) {
+                    ++assoc_no;
+                }
+            }
+            if (assoc_no > max_rule)
+                continue;
+
+            gen_traf_block.push_back(br);
+        }
+    }
+    random_shuffle(gen_traf_block.begin(), gen_traf_block.end());
+    if (prepare_no > gen_traf_block.size())
+        prepare_no = gen_traf_block.size();
+    gen_traf_block.resize(prepare_no);
+    return gen_traf_block;
+}
+
+vector<b_rule> tracer::evolve_pattern(const vector<b_rule> & seed_hot_spot) {
+    vector<b_rule> gen_traf_block;
+    for (auto iter = seed_hot_spot.begin(); iter != seed_hot_spot.end(); ++iter) {
+        b_rule to_push = *iter;
+        to_push.mutate_pred(mut_scalar[0], mut_scalar[1]);
+        gen_traf_block.push_back(to_push);
+    }
+    return gen_traf_block;
+}
+
+void tracer::take_snapshot(string tracefile, double start_time, double interval, int sampling_time, bool rule_test) {
+    io::filtering_istream ref_trace_stream;
+    ref_trace_stream.push(io::gzip_decompressor());
+    ifstream ref_trace_file(tracefile);
+    ref_trace_stream.push(ref_trace_file);
+
+    set<uint32_t> header_rec;
+    vector<boost::unordered_set<addr_5tup> > flow_rec_vec;
+    boost::unordered_set<addr_5tup> flow_rec;
+    int sample_count = 0;
+    double checkpoint = start_time + interval;
+
+    string str;
+    getline(ref_trace_stream, str);
+    addr_5tup packet(str, false);
+    start_time = start_time + packet.timestamp;
+
+    for (string str; getline(ref_trace_stream, str); ) {
+        addr_5tup packet(str, false);
+
+	if (packet.timestamp < start_time) // jump through the start 
+		continue;
+	if (packet.timestamp > checkpoint){ // take next snapsho 
+            flow_rec_vec.push_back(flow_rec);
+            flow_rec.clear();
+	    checkpoint += interval;
+        } else {
+            header_rec.insert(packet.addrs[0]);
+            header_rec.insert(packet.addrs[1]);
+            flow_rec.insert(packet);
+        }
+    }
+    io::close(ref_trace_stream);
+
+    set<uint32_t> hitrule_rec;
+    for (uint32_t i = 0; i<flow_rec_vec.size(); i++) {
+        stringstream ss;
+        ss<<"snapshot-"<<i<<"dat";
+        ofstream ff (ss.str().c_str());
+
+        for (boost::unordered_set<addr_5tup>::iterator iter=flow_rec_vec[i].begin(); iter != flow_rec_vec[i].end(); iter++) {
+            uint32_t src = distance(header_rec.begin(), header_rec.find(iter->addrs[0]));
+            uint32_t dst = distance(header_rec.begin(), header_rec.find(iter->addrs[1]));
+            ff<<src<<"\t"<<dst<<endl;
+	    
+	    if (rule_test){ // linear search of rules
+            	for (uint32_t j = 0; j < rList->list.size(); j++) {
+                	if (rList->list[j].packet_hit(*iter)) {
+                    	hitrule_rec.insert(j);
+                    	break;
+                	}
+            	}
+	    }
+        }
+        ff.close();
+    }
+    
+    if (rule_test)
+    	cout << hitrule_rec.size() << " rules are hit"<<endl;
+}
 
 // ===================================== Trace Generation and Evaluation =========================
 
@@ -526,7 +623,7 @@ void tracer::f_pg_st(fs::path ref_file, uint32_t id, string gen_trace_dir, boost
  * output:unordered_set<addr_5tup> : the set of first packets of all flows
  *
  * function_brief:
- * obtain the first packet of each flow for later flow based pruning
+ * obtain first packet of each flow for later flow based pruning
  */
 boost::unordered_set<addr_5tup> tracer::flow_arr_mp(string flow_info_str) const {
     vector<fs::path> to_proc_files = get_proc_files(ref_trace_dir_str);
@@ -692,63 +789,139 @@ void tracer::p_count_st(const fs::path gz_file_ptr, atomic_uint * thr_n_ptr, mut
     --(*thr_n_ptr);
 }
 
-/* printTestTrace
- * input: tracefile path
- * ouput: void
- *
- * function brief: test how many files are hit by generated trace
- */
-void tracer::printTestTrace(string tracefile) {
-    io::filtering_istream ref_trace_stream;
-    ref_trace_stream.push(io::gzip_decompressor());
-    ifstream ref_trace_file(tracefile);
-    ref_trace_stream.push(ref_trace_file);
 
-    double win = 60;
-    double checkpoint = win+offset;
-    set<uint32_t> header_rec;
-    vector<boost::unordered_set<addr_5tup> > flow_rec_vec;
-    boost::unordered_set<addr_5tup> flow_rec;
-    //uint32_t counter = 0;
+void tracer::parse_pack_file_mp(string pcap_dir, string gen_pack_dir, size_t min, size_t max) const {
+    const size_t File_BLK = 3;
+    size_t thread_no = count_proc();
+    size_t block_no = (max-min + 1)/File_BLK;
+    if (block_no * 3 < max-min + 1)
+        ++block_no;
 
-    for (string str; getline(ref_trace_stream, str); ) {
-        addr_5tup packet(str, false);
-        //counter++;
-        //if (counter < 10)
-        //	cout<<packet.str_readable()<<endl;
-        //else
-        //	return;
-        if (packet.timestamp > checkpoint) {
-            cout<< "reached "<<checkpoint<<endl;
-            checkpoint+=win;
-            flow_rec_vec.push_back(flow_rec);
-            flow_rec.clear();
-        } else {
-            header_rec.insert(packet.addrs[0]);
-            header_rec.insert(packet.addrs[1]);
-            flow_rec.insert(packet);
-        }
+    if ( thread_no > block_no) {
+        thread_no = block_no;
     }
-    io::close(ref_trace_stream);
 
-    set<uint32_t> hitrule_rec;
-    for (uint32_t i = 0; i<flow_rec_vec.size(); i++) {
-        stringstream ss;
-        ss<<"./TracePruning/TestPlot/snapshot"<<i;
-        ofstream ff (ss.str().c_str());
-        for (boost::unordered_set<addr_5tup>::iterator iter=flow_rec_vec[i].begin(); iter != flow_rec_vec[i].end(); iter++) {
-            uint32_t src = distance(header_rec.begin(), header_rec.find(iter->addrs[0]));
-            uint32_t dst = distance(header_rec.begin(), header_rec.find(iter->addrs[1]));
-            ff<<src<<"\t"<<dst<<endl;
-            for (uint32_t j = 0; j < rList->list.size(); j++) {
-                if (rList->list[j].packet_hit(*iter)) {
-                    hitrule_rec.insert(j);
-                    break;
+    size_t task_no = block_no/thread_no;
+
+    vector<string> to_proc;
+    size_t thread_id = 1;
+    vector< std::future<void> > results_exp;
+
+    fs::path dir(pcap_dir);
+    fs::directory_iterator end;
+    if (fs::exists(dir) && fs::is_directory(dir)) {
+        for (fs::directory_iterator iter(dir); (iter != end); ++iter) {
+            if (fs::is_regular_file(iter->status())) {
+                if (to_proc.size() < task_no*File_BLK || thread_id == thread_no) {
+                    to_proc.push_back(iter->path().string());
+                } else {
+                    results_exp.push_back(std::async(
+                                              std::launch::async,
+                                              &tracer::p_pf_st,
+                                              this, to_proc,
+                                              (thread_id-1)*task_no)
+                                         );
+		    ++thread_id;
+		    to_proc.clear();
                 }
             }
         }
-        ff.close();
     }
-    cout << hitrule_rec.size() << " rules are hit"<<endl;
+
+    results_exp.push_back(std::async(
+                              std::launch::async,
+                              &tracer::p_pf_st,
+                              this, to_proc,
+                              (thread_no-1)*task_no)
+                         );
+    for (size_t i = 0; i < thread_no; ++i)
+	    results_exp[i].get();
+
+    return;
 }
+
+void tracer::p_pf_st(vector<string> to_proc, size_t id) const {
+    struct pcap_pkthdr header; // The header that pcap gives us
+    const u_char *packet; // The actual packet
+
+    pcap_t *handle;
+    const struct sniff_ethernet * ethernet;
+    const struct sniff_ip * ip;
+    const struct sniff_tcp *tcp;
+    uint32_t size_ip;
+    uint32_t size_tcp;
+
+
+    size_t count = 2;
+    const size_t File_BLK = 3;
+
+    stringstream ss;
+    ss<<"packData";
+    ss<<std::setw(5)<<std::setfill('0')<<id;
+    ss<<"txt.gz";
+
+    ofstream outfile(ss.str());
+    io::filtering_ostream out;
+    out.push(io::gzip_compressor());
+    out.push(outfile);
+
+    for (size_t i = 0; i < to_proc.size(); ++i) {
+        if (i > count) {
+            out.pop();
+            outfile.close();
+            ss.clear();
+            ++id;
+            ss<<"packData";
+            ss<<std::setw(5)<<std::setfill('0')<<id;
+            ss<<"txt.gz";
+            outfile.open(ss.str());
+            count += File_BLK;
+        }
+
+        char errbuf[PCAP_ERRBUF_SIZE];
+        handle = pcap_open_offline(to_proc[i].c_str(), errbuf);
+
+        while (true) {
+            packet = pcap_next(handle, &header);
+            if (packet == NULL)
+                break;
+
+            ethernet = (struct sniff_ethernet*)(packet);
+            int ether_offset = 0;
+            if (ntohs(ethernet->ether_type) == ETHER_TYPE_IP) {
+                ether_offset = 14;
+            } else if (ntohs(ethernet->ether_type) == ETHER_TYPE_8021Q) {
+                // here may have a bug
+                ether_offset = 18;
+            } else {
+                continue;
+            }
+
+            ip = (struct sniff_ip*)(packet + ether_offset);
+            size_ip = IP_HL(ip)*4;
+
+            if (IP_V(ip) != 4 || size_ip < 20)
+                continue;
+            if (uint32_t(ip->ip_p) != 6)
+                continue;
+
+            tcp = (struct sniff_tcp*)(packet + ether_offset + size_ip);
+            size_tcp = TH_OFF(tcp)*4;
+            if (size_tcp < 20)
+                continue;
+
+            stringstream ss;
+            ss<<header.ts.tv_sec<<'%'<<header.ts.tv_usec<<'%';
+            ss<<ntohl(ip->ip_src.s_addr)<<'%'<<ntohl(ip->ip_dst.s_addr);
+            ss<<'%'<<tcp->th_sport<<'%'<<tcp->th_dport;
+
+            out<<ss.str()<<endl;
+        }
+
+        pcap_close(handle);
+    }
+    io::close(out);
+}
+
+
 

@@ -7,6 +7,7 @@
 
 using std::cout;
 using std::endl;
+using std::ofstream;
 
 namespace logging = boost::log;
 namespace src = boost::log::sources;
@@ -31,8 +32,42 @@ void logging_init() {
     );*/
 }
 
+void evolving_bucket_test(tracer & tGen, bucket_tree & bTree_dyn, bucket_tree & bTree_stat, size_t times) {
+    ofstream recorder_dyn("./TCAM_dyn_rec");
+    ofstream recorder_stat("./TCAM_stat_rec");
+    vector<b_rule> seed_hotspot = tGen.gen_seed_hotspot(80, 40);
+    vector<b_rule> start_from = tGen.evolve_pattern(seed_hotspot);
+    std::pair<size_t, size_t> last_overhead (8000,8000);
+    size_t adj_counter = 0;
+    double threshold = 1.2;
+
+    for (size_t i = 0; i < times; ++i) {
+        vector<b_rule> evolve_to = tGen.evolve_pattern(seed_hotspot);
+        bTree_dyn.evolving_traf_test_dyn(start_from, evolve_to, recorder_dyn, threshold, last_overhead, adj_counter);
+	bTree_stat.evolving_traf_test_stat(start_from, evolve_to, recorder_stat);
+
+        // random shuffle start_from and seed_hotspot
+        vector<std::pair<b_rule, size_t> > indexed_vec;
+        for (size_t i = 0; i < evolve_to.size(); ++i) {
+            indexed_vec.push_back(std::make_pair(evolve_to[i], i));
+        }
+        std::random_shuffle(indexed_vec.begin(), indexed_vec.end());
+        start_from.clear();
+        vector<b_rule> new_seed_hotspot;
+
+        for (size_t i = 0; i < indexed_vec.size(); ++i) {
+            start_from.push_back(indexed_vec[i].first);
+            new_seed_hotspot.push_back(seed_hotspot[indexed_vec[i].second]);
+        }
+	seed_hotspot = new_seed_hotspot;
+    }
+
+    cout << "total adjust time: "<< adj_counter << endl;
+}
+
 int main() {
-    // init log, rule list
+    // init log, rule list, randomness
+    srand (time(NULL));
     logging_init();
     string rulefile = "../para_src/rule4000";
     rule_list rList(rulefile);
@@ -50,11 +85,26 @@ int main() {
     // tGen.hotspot_prob_b(true);
     // tGen.pFlow_pruning_gen("..");
 
+
+    // unit test: simu traffic test
+    // static test
+    // bTree.static_traf_test("../para_src/hotspot.dat_m");
+    // evolving test
+    bucket_tree bTree_static(rList, 20);
+    evolving_bucket_test(tGen, bTree, bTree_static, 23);
+    /*
+    vector<b_rule> seed_hotspot = tGen.gen_seed_hotspot(80, 40);
+    vector<b_rule> start_from = tGen.evolve_pattern(seed_hotspot);
+    ofstream recorder("./TCAM_record");
+    for (size_t i = 0; i < 5; ++i) {
+        vector<b_rule> evolve_to = tGen.evolve_pattern(seed_hotspot);
+        bTree.evolving_traf_test(start_from, evolve_to, recorder);
+        start_from = evolve_to;
+    }
+    */
+
     // unit test: buck_tree generation and search
     // bTree.search_test("../Trace_Generate/trace-20k-0.01-10/GENtrace/ref_trace.gz");
-
-    // unit test: static test
-    bTree.static_traf_test("../para_src/hotspot.dat_m");
 
     // unit test: bucket split
     /*
@@ -91,7 +141,7 @@ int main() {
     string brule_str = "23.237.204.0/22\t0.0.0.0/1\t0.0.0.0/16\t0.0.1.0/24";
     b_rule br(brule_str);
     if (buck.overlap(br))
-	    cout <<  "wrong result" <<endl;
+        cout <<  "wrong result" <<endl;
     */
 
     // unit test: address test
@@ -105,9 +155,10 @@ int main() {
     	cout << a2.pref << " " << a2.mask <<endl;
     }
     */
-    
+
     return 0;
 }
+
 
 
 

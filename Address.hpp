@@ -14,7 +14,7 @@ class addr_5tup {
   public:
     inline addr_5tup();
     inline addr_5tup(const addr_5tup &);
-    inline addr_5tup(const std::string &, bool = true);
+    inline addr_5tup(const std::string &, bool = false);
     inline addr_5tup(const std::string &, double);
 
     inline void copy_header(const addr_5tup &);

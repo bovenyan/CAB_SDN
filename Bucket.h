@@ -25,7 +25,7 @@ class bucket: public b_rule {
     bucket(const bucket &);
     bucket(const string &, const rule_list *);
     std::pair<double, size_t> split(const std::vector<size_t> &, rule_list *);
-    int reSplit(const std::vector<size_t> &, rule_list *, bool);
+    int reSplit(const std::vector<size_t> &, rule_list *, bool = false);
     void reSplit(const std::vector<std::vector<size_t> >&, rule_list *, size_t);
     std::vector<size_t> unq_comp(rule_list *);
 

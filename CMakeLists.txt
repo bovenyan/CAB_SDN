@@ -12,7 +12,7 @@ endif()
 
 add_definitions(-DBOOST_LOG_DYN_LINK)
 
-set(CAB BucketTree.cpp MicRuleTree.cpp RuleList.cpp OFswitch.cpp BucketTree.cpp TraceAnalyze.cpp TraceGen.cpp)
+set(CAB Bucket.cpp BucketTree.cpp MicRuleTree.cpp RuleList.cpp OFswitch.cpp BucketTree.cpp TraceAnalyze.cpp TraceGen.cpp)
 add_library(cab ${CAB})
 add_executable(UnitTest UnitTest.cpp)
 

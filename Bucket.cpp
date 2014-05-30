@@ -9,12 +9,13 @@ using std::ofstream;
 using std::pair;
 using std::set;
 
-typedef vector<uint32_t>::iterator Iter_id;
-typedef vector<bucket*>::iterator Iter_son;
 
 namespace logging = boost::log;
 namespace src = boost::log::sources;
 namespace attrs = boost::log::attributes;
+
+typedef vector<uint32_t>::iterator Iter_id;
+typedef vector<bucket*>::iterator Iter_son;
 
 
 src::logger bucket::lg = src::logger();
@@ -91,7 +92,7 @@ pair<double, size_t> bucket::split(const vector<size_t> & dim , rule_list *rList
     return std::make_pair(double(total_rule_no)/total_son_no, largest_rule_no);
 }
 
-int bucket::reSplit(const vector<size_t> & dim , rule_list *rList, bool apply = false) {
+int bucket::reSplit(const vector<size_t> & dim , rule_list *rList, bool apply) {
     if (!sonList.empty())
         cleanson();
 
