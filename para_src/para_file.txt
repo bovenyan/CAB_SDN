@@ -6,8 +6,11 @@ hot_arr	20
 c_prob	0.01
 hr_thres	10
 h_candi_no	200
-he_count	../para_src/flow_info
-ref_t	/mnt/hgfs/VMshared/traces
 hot_ref	../para_src/tree_pr.dat
 hot_c	../para_src/hotspot.dat
 mutate_scalar	6 1
+root dir	./Trace_Generate
+trace gen dir	./Trace_Generate
+flow arrival file	../para_src/flow_info
+pcap dir	/mnt/Day0/CAP_NIC1
+parsed pcap dir	./Packet_File

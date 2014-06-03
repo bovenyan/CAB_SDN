@@ -20,6 +20,7 @@ namespace fs = boost::filesystem;
 namespace io = boost::iostreams;
 
 typedef boost::unordered_map<addr_5tup, uint32_t>::iterator Map_iter;
+typedef vector<fs::path> Path_Vec_T;
 
 /* tracer
  *
@@ -51,9 +52,6 @@ void tracer::set_para(string loc_para_str) {
     for (string str; getline(ff, str); ) {
         vector<string> temp;
         boost::split(temp, str, boost::is_any_of("\t"));
-        if (!temp[0].compare("ref_t")) {
-            ref_trace_dir_str = temp[1];
-        }
         if (!temp[0].compare("hot_c")) {
             hotcandi_str = temp[1];
         }
@@ -82,9 +80,6 @@ void tracer::set_para(string loc_para_str) {
         if (!temp[0].compare("h_candi_no")) {
             hot_candi_no = boost::lexical_cast<uint32_t>(temp[1]);
         }
-        if (!temp[0].compare("he_count")) {
-            flowInfoFile_str = temp[1];
-        }
         if (!temp[0].compare("hot_ref")) {
             hotspot_ref = temp[1];
         }
@@ -94,12 +89,28 @@ void tracer::set_para(string loc_para_str) {
             mut_scalar[0] = boost::lexical_cast<uint32_t>(temp1[0]);
             mut_scalar[1] = boost::lexical_cast<uint32_t>(temp1[1]);
         }
+	if (!temp[0].compare("root dir")) {
+	    trace_root_dir = temp[1];
+	}
+	if (!temp[0].compare("trace gen dir")) {
+	    gen_trace_dir = temp[1];
+	}
+	if (!temp[0].compare("flow arrival file")){
+	    flowInfoFile_str = temp[1];
+	}
+	if (!temp[0].compare("pcap dir")){
+	    pcap_dir = temp[1];
+	}
+	if (!temp[0].compare("parsed pcap dir")){
+	    parsed_pcap_dir = temp[1];
+	}
+
     }
 }
 
 void tracer::print_setup() const {
     cout <<" ======= SETUP BRIEF: ======="<<endl;
-    cout<<"reference trace directory is in\t"<<ref_trace_dir_str<<endl;
+    cout<<"reference trace directory is in\t"<<parsed_pcap_dir<<endl;
     cout<<"header info is in : " << flowInfoFile_str << endl;
     cout<<"hotspot candidates are in\t"<<hotcandi_str<<endl;
     cout<<"simulation time set as\t"<<duration<<endl;
@@ -123,27 +134,28 @@ void tracer::print_setup() const {
  * 	  outputs the first packet timestamp of each trace file, helps determine how many trace files to use
  */
 void tracer::trace_get_ts(string trace_ts_file) {
-    fs::path dir(ref_trace_dir_str);
-    fs::directory_iterator end;
+    fs::path dir(parsed_pcap_dir);
     ofstream ffo(trace_ts_file);
     if (fs::exists(dir) && fs::is_directory(dir)) {
-        for (fs::directory_iterator iter(dir); (iter != end); ++iter) {
-            if (fs::is_regular_file(iter->status())) {
+	Path_Vec_T pvec;
+	std::copy(fs::directory_iterator(dir), fs::directory_iterator(), std::back_inserter(pvec));
+	std::sort(pvec.begin(), pvec.end());
+
+        //for (fs::directory_iterator iter(dir); (iter != end); ++iter) {
+	for (Path_Vec_T::const_iterator it (pvec.begin()); it != pvec.end(); ++it){
                 try {
                     io::filtering_istream in;
                     in.push(io::gzip_decompressor());
-                    ifstream infile(iter->path().c_str());
+                    ifstream infile(it->c_str());
                     in.push(infile);
                     string str;
                     getline(in, str);
                     addr_5tup f_packet(str);
-                    ffo<<iter->path() << "\t" << f_packet.timestamp <<endl;
+                    ffo<< *it << "\t" << f_packet.timestamp <<endl;
                     io::close(in); // careful
                 } catch (const io::gzip_error & e) {
                     cout<<e.what()<<std::endl;
                 }
-
-            }
         }
     }
     return;
@@ -160,15 +172,18 @@ void tracer::trace_get_ts(string trace_ts_file) {
 vector<fs::path> tracer::get_proc_files ( string ref_trace_dir) const {
     // find out how many files to process
     fs::path dir(ref_trace_dir);
-    fs::directory_iterator end;
     vector<fs::path> to_proc_files;
+
     if (fs::exists(dir) && fs::is_directory(dir)) {
-        for (fs::directory_iterator iter(dir); iter != end; ++iter) {
+	Path_Vec_T pvec;
+	std::copy(fs::directory_iterator(dir), fs::directory_iterator(), std::back_inserter(pvec));
+	std::sort(pvec.begin(), pvec.end());
+	
+	for (Path_Vec_T::const_iterator it (pvec.begin()); it != pvec.end(); ++it){
             try {
-                if (fs::is_regular_file(iter->status())) {
                     io::filtering_istream in;
                     in.push(io::gzip_decompressor());
-                    ifstream infile(iter->path().c_str());
+                    ifstream infile(it->c_str());
                     in.push(infile);
                     string str;
                     getline(in,str);
@@ -176,8 +191,7 @@ vector<fs::path> tracer::get_proc_files ( string ref_trace_dir) const {
                     if (packet.timestamp > terminT) {
                         io::close(in);
                         break;
-                    }
-                    to_proc_files.push_back(iter->path());
+                    to_proc_files.push_back(*it);
                     io::close(in);
                 }
             } catch(const io::gzip_error & e) {
@@ -209,20 +223,21 @@ uint32_t count_proc() {
  * Collects the gz traces with prefix "ptrace-";
  * Merge into one gz trace named "ref_trace.gz"
  */
-void tracer::merge_files(string gen_trace_dir) const {
-    fs::path file (gen_trace_dir + "/ref_trace.gz");
+void tracer::merge_files(string proc_dir) const {
+    fs::path file (proc_dir + "/ref_trace.gz");
     if (fs::exists(file))
         fs::remove(file);
 
     for (uint32_t i = 0; ; ++i) {
         stringstream ss;
-        //ss<<gen_trace_dir<<"/ref_trace-"<<i<<".gz";
-        ss<<gen_trace_dir<<"/ptrace-"<<i<<".gz";
+        ss<<proc_dir<<"/ptrace-";
+	ss<<std::setw(3)<<std::setfill('0')<<i;
+	ss<<".gz";
         fs::path to_merge(ss.str());
         if (fs::exists(to_merge)) {
             io::filtering_ostream out;
             out.push(io::gzip_compressor());
-            ofstream out_file(gen_trace_dir+"/ref_trace.gz", std::ios_base::app);
+            ofstream out_file(proc_dir+"/ref_trace.gz", std::ios_base::app);
             out.push(out_file);
             cout << "Merging:" << ss.str()<<endl;
             io::filtering_istream in;
@@ -364,65 +379,80 @@ vector<b_rule> tracer::evolve_pattern(const vector<b_rule> & seed_hot_spot) {
     return gen_traf_block;
 }
 
-void tracer::take_snapshot(string tracefile, double start_time, double interval, int sampling_time, bool rule_test) {
-    io::filtering_istream ref_trace_stream;
-    ref_trace_stream.push(io::gzip_decompressor());
-    ifstream ref_trace_file(tracefile);
-    ref_trace_stream.push(ref_trace_file);
-
-    set<uint32_t> header_rec;
-    vector<boost::unordered_set<addr_5tup> > flow_rec_vec;
-    boost::unordered_set<addr_5tup> flow_rec;
-    int sample_count = 0;
-    double checkpoint = start_time + interval;
-
-    string str;
-    getline(ref_trace_stream, str);
-    addr_5tup packet(str, false);
-    start_time = start_time + packet.timestamp;
-
-    for (string str; getline(ref_trace_stream, str); ) {
-        addr_5tup packet(str, false);
-
-	if (packet.timestamp < start_time) // jump through the start 
-		continue;
-	if (packet.timestamp > checkpoint){ // take next snapsho 
-            flow_rec_vec.push_back(flow_rec);
-            flow_rec.clear();
-	    checkpoint += interval;
-        } else {
-            header_rec.insert(packet.addrs[0]);
-            header_rec.insert(packet.addrs[1]);
-            flow_rec.insert(packet);
-        }
-    }
-    io::close(ref_trace_stream);
-
-    set<uint32_t> hitrule_rec;
-    for (uint32_t i = 0; i<flow_rec_vec.size(); i++) {
-        stringstream ss;
-        ss<<"snapshot-"<<i<<"dat";
-        ofstream ff (ss.str().c_str());
-
-        for (boost::unordered_set<addr_5tup>::iterator iter=flow_rec_vec[i].begin(); iter != flow_rec_vec[i].end(); iter++) {
-            uint32_t src = distance(header_rec.begin(), header_rec.find(iter->addrs[0]));
-            uint32_t dst = distance(header_rec.begin(), header_rec.find(iter->addrs[1]));
-            ff<<src<<"\t"<<dst<<endl;
-	    
-	    if (rule_test){ // linear search of rules
-            	for (uint32_t j = 0; j < rList->list.size(); j++) {
-                	if (rList->list[j].packet_hit(*iter)) {
-                    	hitrule_rec.insert(j);
-                    	break;
-                	}
-            	}
-	    }
-        }
-        ff.close();
-    }
+void tracer::raw_snapshot(string tracedir, double start_time, double interval) {
+    fs::path dir(tracedir);
+    vector<fs::path> to_proc_files;
     
-    if (rule_test)
-    	cout << hitrule_rec.size() << " rules are hit"<<endl;
+    Path_Vec_T pvec;
+    if (fs::exists(dir) && fs::is_directory(dir)) {
+	std::copy(fs::directory_iterator(dir), fs::directory_iterator(), std::back_inserter(pvec));
+	std::sort(pvec.begin(), pvec.end());
+    }
+    else 
+	return;
+    
+    EpochT jesusBorn(-1,0);
+
+    boost::unordered_map<pair<size_t, size_t>, size_t> hostpair_rec;
+    set<size_t> hosts;
+
+    bool stop = false;
+    bool start_processing = false;
+
+    for (Path_Vec_T::const_iterator it (pvec.begin()); it != pvec.end() && !stop; ++it){
+	io::filtering_istream in;
+	in.push(io::gzip_decompressor());
+	ifstream infile(it->c_str());
+	in.push(infile);
+	string str;
+	getline(in, str);
+
+	if (jesusBorn < 0){
+		jesusBorn = EpochT(str);
+	}
+	if (EpochT(str) < jesusBorn + start_time){
+		if ( it+1 != pvec.end() )
+			continue;
+	}
+	else if (!start_processing){
+		--it;
+		start_processing = true;
+	}
+
+	cout << "processing" << it->c_str() << endl;
+
+	in.pop();
+	infile.close();
+	infile.open(it->c_str());
+	in.push(infile);
+
+	for (string str; getline(in, str); ){
+		addr_5tup packet (str, jesusBorn);
+		if (packet.timestamp < start_time + interval){
+			auto key = std::make_pair(packet.addrs[0], packet.addrs[1]);
+			auto res = hostpair_rec.insert(std::make_pair(key, 1));
+			hosts.insert(packet.addrs[0]);
+			hosts.insert(packet.addrs[1]);
+			if (!res.second) 
+				++hostpair_rec[key];
+		}
+		else{
+			stop = true;
+			break;
+		}
+	}
+    }
+
+    cout << "total host no: "<< hosts.size()<<endl;
+    cout << "total hostpair no: "<< hostpair_rec.size() <<endl;
+
+    
+    ofstream ff("snapshot.dat");
+    for ( auto it = hostpair_rec.begin(); it != hostpair_rec.end(); ++it){
+	    int x_dist = std::distance(hosts.begin(), hosts.find(it->first.first));
+	    int y_dist = std::distance(hosts.begin(), hosts.find(it->first.second));
+	    ff<<x_dist<<"\t"<<y_dist<<"\t"<<it->second<<endl;
+    }
 }
 
 // ===================================== Trace Generation and Evaluation =========================
@@ -436,7 +466,7 @@ void tracer::take_snapshot(string tracefile, double start_time, double interval,
  */
 void tracer::pFlow_pruning_gen() {
     // get the flow info count
-    fs::path dir(trace_root_dir + "/Trace_Generate");
+    fs::path dir(trace_root_dir);
     if (fs::create_directory(dir)) {
         cout<<"creating: " << dir.string()<<endl;
     } else {
@@ -444,7 +474,8 @@ void tracer::pFlow_pruning_gen() {
     }
 
     unordered_set<addr_5tup> flowInfo;
-    if (flowInfoFile_str != "") {
+    if (fs::exists(fs::path(flowInfoFile_str))){
+    //if (flowInfoFile_str != "") {
         ifstream infile(flowInfoFile_str.c_str());
         for (string str; getline(infile, str);) {
             addr_5tup packet(str, false);
@@ -454,21 +485,17 @@ void tracer::pFlow_pruning_gen() {
         }
         infile.close();
         cout << "read flow info successful" <<endl;
-    } else
-        flowInfo = flow_arr_mp("./para_src/flow_info");
+    } else{
+        flowInfo = flow_arr_mp();
+    }
 
     // trace generated in format of  "trace-200k-0.05-20"
     stringstream ss;
     ss<<dir.string()<<"/trace-"<<flow_rate<<"k-"<<cold_prob<<"-"<<hotspot_no;
     // fs::path son_dir(ss.str());
     gen_trace_dir = ss.str();
-    if (fs::create_directory()) {
-        cout<<"creating: "<<son_dir.string()<<endl;
-    } else {
-        cout<<"exitst: "<<son_dir.string()<<endl;
-    }
     // prune and gen file
-    flow_pruneGen_mp(flowInfo, son_dir);
+    flow_pruneGen_mp(flowInfo);
 }
 
 
@@ -481,12 +508,11 @@ void tracer::pFlow_pruning_gen() {
  * prune the headers according arrival, and map the headers
  */
 void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo) const {
-    if (fs::create_directory(fs::path(gen_trace_dir))){
+    if (fs::create_directory(fs::path(gen_trace_dir)))
     	cout<<"creating: "<<gen_trace_dir<<endl;
-    }
-    else{
+    else
     	cout<<"exists:   "<<gen_trace_dir<<endl;
-    }
+    
 
     std::multimap<double, addr_5tup> ts_prune_map;
     for (unordered_set<addr_5tup>::iterator iter=flowInfo.begin(); iter != flowInfo.end(); ++iter) {
@@ -566,7 +592,7 @@ void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo) const {
 
 
     vector< std::future<void> > results_exp;
-    vector< fs::path> to_proc_files = get_proc_files(ref_trace_dir_str);
+    vector< fs::path> to_proc_files = get_proc_files(parsed_pcap_dir);
 
     for(uint32_t file_id = 0; file_id < to_proc_files.size(); ++file_id) {
         results_exp.push_back(std::async(std::launch::async, &tracer::f_pg_st, this, to_proc_files[file_id], file_id, &pruned_map));
@@ -593,7 +619,9 @@ void tracer::f_pg_st(fs::path ref_file, uint32_t id, boost::unordered_map<addr_5
     in.push(infile);
 
     stringstream ss;
-    ss << gen_trace_dir<< "/IDtrace/ptrace-"<<id<<".gz";
+    ss << gen_trace_dir<< "/IDtrace/ptrace-";
+    ss << std::setw(3) << std::setfill('0')<<id;
+    ss <<".gz";
     io::filtering_ostream out_id;
     out_id.push(io::gzip_compressor());
     ofstream outfile_id (ss.str().c_str());
@@ -601,7 +629,9 @@ void tracer::f_pg_st(fs::path ref_file, uint32_t id, boost::unordered_map<addr_5
     out_id.precision(15);
 
     stringstream ss1;
-    ss1 << gen_trace_dir<< "/GENtrace/ptrace-"<<id<<".gz";
+    ss1 << gen_trace_dir<< "/GENtrace/ptrace-";
+    ss1 << std::setw(3) << std::setfill('0')<<id;
+    ss1 <<".gz";
     io::filtering_ostream out_loc;
     out_loc.push(io::gzip_compressor());
     ofstream outfile_gen (ss1.str().c_str());
@@ -613,8 +643,6 @@ void tracer::f_pg_st(fs::path ref_file, uint32_t id, boost::unordered_map<addr_5
         auto iter = map_ptr->find(packet);
         if (iter != map_ptr->end()) {
             packet.copy_header(iter->second.second);
-            //packet = iter->second.second;
-            //packet.timestamp = iter->first.timestamp;
             out_id << packet.timestamp << "\t" << iter->second.first<<endl;
             out_loc << packet.str_easy_RW() << endl;
         }
@@ -633,8 +661,8 @@ void tracer::f_pg_st(fs::path ref_file, uint32_t id, boost::unordered_map<addr_5
  * function_brief:
  * obtain first packet of each flow for later flow based pruning
  */
-boost::unordered_set<addr_5tup> tracer::flow_arr_mp(string flow_info_str) const {
-    vector<fs::path> to_proc_files = get_proc_files(ref_trace_dir_str);
+boost::unordered_set<addr_5tup> tracer::flow_arr_mp() const {
+    vector<fs::path> to_proc_files = get_proc_files(parsed_pcap_dir);
     cout << "Processing ... To process trace files " << to_proc_files.size() << endl;
     // process using multi-thread;
     vector< std::future<boost::unordered_set<addr_5tup> > > results_exp;
@@ -664,7 +692,7 @@ boost::unordered_set<addr_5tup> tracer::flow_arr_mp(string flow_info_str) const 
     }
 
     // print the results;
-    ofstream outfile(flow_info_str);
+    ofstream outfile(flowInfoFile_str);
     outfile.precision(15);
     for (boost::unordered_set<addr_5tup>::iterator iter = flowInfo_set.begin(); iter != flowInfo_set.end(); ++iter) {
         outfile<< iter->str_easy_RW() <<endl;
@@ -798,7 +826,12 @@ void tracer::p_count_st(const fs::path gz_file_ptr, atomic_uint * thr_n_ptr, mut
 }
 
 
-void tracer::parse_pack_file_mp(string pcap_dir, string gen_pack_dir, size_t min, size_t max) const {
+void tracer::parse_pcap_file_mp(size_t min, size_t max) const {
+    if (fs::create_directory(fs::path(parsed_pcap_dir)))
+	    cout << "creating" << parsed_pcap_dir <<endl;
+    else
+	    cout << "exists: "<< parsed_pcap_dir<<endl;
+
     const size_t File_BLK = 3;
     size_t thread_no = count_proc();
     size_t block_no = (max-min + 1)/File_BLK;
@@ -815,14 +848,30 @@ void tracer::parse_pack_file_mp(string pcap_dir, string gen_pack_dir, size_t min
     size_t thread_id = 1;
     vector< std::future<void> > results_exp;
 
+    size_t counter = 0;
     fs::path dir(pcap_dir);
-    fs::directory_iterator end;
     if (fs::exists(dir) && fs::is_directory(dir)) {
-        for (fs::directory_iterator iter(dir); (iter != end); ++iter) {
-            if (fs::is_regular_file(iter->status())) {
+	Path_Vec_T pvec;
+	std::copy(fs::directory_iterator(dir), fs::directory_iterator(), std::back_inserter(pvec));
+	std::sort(pvec.begin(), pvec.end());
+	
+	for (Path_Vec_T::const_iterator it (pvec.begin()); it != pvec.end(); ++it){
+	    if (counter < min){
+	    	    ++counter;
+		    continue;
+	    }
+	    if (counter > max)
+		    break;
+	    ++counter;
+
                 if (to_proc.size() < task_no*File_BLK || thread_id == thread_no) {
-                    to_proc.push_back(iter->path().string());
+                    to_proc.push_back(it->string());
                 } else {
+		    cout <<"thread " << thread_id << " covers : "<<endl;
+		    for (auto iter = to_proc.begin(); iter != to_proc.end(); ++iter){
+		    	cout << *iter << endl;
+		    }
+
                     results_exp.push_back(std::async(
                                               std::launch::async,
                                               &tracer::p_pf_st,
@@ -831,9 +880,14 @@ void tracer::parse_pack_file_mp(string pcap_dir, string gen_pack_dir, size_t min
                                          );
 		    ++thread_id;
 		    to_proc.clear();
+                    to_proc.push_back(it->string());
                 }
-            }
         }
+    }
+
+    cout <<"thread " << thread_id << " covers :" << endl;
+    for (auto iter = to_proc.begin(); iter != to_proc.end(); ++iter){
+	cout << *iter << endl;
     }
 
     results_exp.push_back(std::async(
@@ -860,15 +914,17 @@ void tracer::p_pf_st(vector<string> to_proc, size_t id) const {
     uint32_t size_tcp;
 
 
-    size_t count = 2;
+    int count = 2;
     const size_t File_BLK = 3;
 
     stringstream ss;
-    ss<<"packData";
-    ss<<std::setw(5)<<std::setfill('0')<<id;
+    
+    ss<<parsed_pcap_dir+"/packData";
+    ss<<std::setw(3)<<std::setfill('0')<<id;
     ss<<"txt.gz";
 
     ofstream outfile(ss.str());
+    cout << "created: "<<ss.str()<<endl;
     io::filtering_ostream out;
     out.push(io::gzip_compressor());
     out.push(outfile);
@@ -877,12 +933,15 @@ void tracer::p_pf_st(vector<string> to_proc, size_t id) const {
         if (i > count) {
             out.pop();
             outfile.close();
+	    ss.str(string());
             ss.clear();
             ++id;
-            ss<<"packData";
-            ss<<std::setw(5)<<std::setfill('0')<<id;
+            ss<<parsed_pcap_dir+"/packData";
+            ss<<std::setw(3)<<std::setfill('0')<<id;
             ss<<"txt.gz";
             outfile.open(ss.str());
+            cout << "created: "<<ss.str()<<endl;
+	    out.push(outfile);
             count += File_BLK;
         }
 
@@ -927,6 +986,7 @@ void tracer::p_pf_st(vector<string> to_proc, size_t id) const {
         }
 
         pcap_close(handle);
+	cout << "finished_processing : "<< to_proc[i] << endl;
     }
     io::close(out);
 }

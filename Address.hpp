@@ -5,6 +5,94 @@
 #include <boost/functional/hash.hpp>
 class range_addr;
 
+class EpochT{
+	long int sec;
+	long int msec;
+
+	public:
+	inline EpochT():sec(0),msec(0){}
+
+	inline EpochT(int isec, int imsec):sec(isec),msec(imsec){}
+
+	inline EpochT(const std::string & str){
+		std::vector<std::string> temp;
+		boost::split(temp, str, boost::is_any_of("%"));
+		sec = boost::lexical_cast<uint32_t> (temp[0]);
+		msec = boost::lexical_cast<uint32_t> (temp[1]);
+	}
+
+	inline EpochT(const double & dtime){
+		sec = int(dtime);
+		msec = int((dtime-sec)*1000000);
+	}
+
+	inline EpochT(const int & itime){
+		sec = int(itime);
+		msec = 0;
+	}
+
+	inline EpochT(const EpochT & rhs){
+		sec = rhs.sec;
+		msec = rhs.sec;
+	}
+
+	inline EpochT operator+(const double & dtime) const{
+		long sec = this->sec + int(dtime);
+		long msec = this->msec + int((dtime-int(dtime))*1000000);
+		if (msec > 1000000){
+			msec -= 1000000;
+			sec += 1;
+		}
+		EpochT res(sec, msec);
+		return res;
+	}
+
+	inline EpochT operator+(const int & rhs) const{
+		EpochT res(this->sec+rhs, this->msec);
+		return res;
+	}
+
+	inline EpochT operator+(const EpochT & rhs) const{
+		long sec = this->sec+rhs.sec;
+		long msec = this->msec+rhs.sec;
+		if (msec > 1000000){
+			msec -= 1000000;
+			sec += 1;
+		}
+		EpochT res(sec, msec);
+		return res;
+	}
+
+	inline EpochT operator-(const EpochT & rhs) const{
+		long sec = this->sec-rhs.sec;
+		long msec = this->msec-rhs.sec;
+		if (msec < 0){
+			msec += 1000000;
+			sec -= 1;
+		}
+		EpochT res(sec, msec);
+		return res;
+	}
+
+	bool operator<(const EpochT & rhs) const{
+		if (this->sec < rhs.sec){
+			return true;
+		}
+		else if(this->sec == rhs.sec){
+			if (this->msec < rhs.sec)
+				return true;
+		}
+		return false;
+	}
+
+	double toDouble(const EpochT & offset) const{
+		double res = this->sec - offset.sec;
+		res += double(this->msec - offset.msec)/1000000;
+		return res;
+	}
+
+};
+
 class addr_5tup {
   public:
     uint32_t addrs[4];
@@ -14,7 +102,8 @@ class addr_5tup {
   public:
     inline addr_5tup();
     inline addr_5tup(const addr_5tup &);
-    inline addr_5tup(const std::string &, bool = false);
+    inline addr_5tup(const std::string &); // processing gen
+    inline addr_5tup(const std::string &, const EpochT &); // processing raw
     inline addr_5tup(const std::string &, double);
 
     inline void copy_header(const addr_5tup &);
@@ -102,6 +191,30 @@ inline addr_5tup::addr_5tup(const addr_5tup & ad) {
     timestamp = ad.timestamp;
 }
 
+inline addr_5tup::addr_5tup(const string & str){
+    vector<string> temp;
+    boost::split(temp, str, boost::is_any_of("%"));
+    proto = true;
+    timestamp = boost::lexical_cast<double>(temp[0]);
+    addrs[0] = boost::lexical_cast<uint32_t>(temp[1]);
+    addrs[1] = boost::lexical_cast<uint32_t>(temp[2]);
+    addrs[2] = boost::lexical_cast<uint32_t>(temp[3]);
+    addrs[3] = boost::lexical_cast<uint32_t>(temp[4]);
+}
+
+inline addr_5tup::addr_5tup(const string & str, const EpochT & offset){
+    vector<string> temp;
+    boost::split(temp, str, boost::is_any_of("%"));
+    proto = true;
+    EpochT ts_ep(boost::lexical_cast<uint32_t>(temp[0]), boost::lexical_cast<uint32_t>(temp[1]));
+    timestamp = ts_ep.toDouble(offset);
+    addrs[0] = boost::lexical_cast<uint32_t>(temp[2]);
+    addrs[1] = boost::lexical_cast<uint32_t>(temp[3]);
+    addrs[2] = boost::lexical_cast<uint32_t>(temp[4]);
+    addrs[3] = boost::lexical_cast<uint32_t>(temp[5]);
+}
+
+/*
 inline addr_5tup::addr_5tup(const string & str, bool readable) {
     vector<string> temp;
     boost::split(temp, str, boost::is_any_of("%"));
@@ -130,6 +243,8 @@ inline addr_5tup::addr_5tup(const string & str, bool readable) {
     addrs[3] = boost::lexical_cast<uint32_t>(temp[4]);
     // proto neglect
 }
+*/
+
 
 inline addr_5tup::addr_5tup(const string & str, double ts) {
     vector<string> temp;

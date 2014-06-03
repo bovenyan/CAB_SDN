@@ -45,7 +45,6 @@ class tracer
 {
 public:
     double flow_rate;
-    string ref_trace_dir_str;
     double cold_prob;
     uint32_t hotspot_no;
     double hotvtime;
@@ -62,16 +61,18 @@ private:
     string hotspot_ref;
 
     // locality traffic parameter
-    string flowInfoFile_str;    // first arr time of each flow
     string hotcandi_str;	// hotspot candi file
     uint32_t scope[4];		// hotspot probing scope
     uint32_t hot_rule_thres;	// lower bound for indentify a hot rule
     uint32_t hot_candi_no;	// number of hot candidate to generate
 
 
-    // sources
+    // sources and gen
     string trace_root_dir; 	// the root directory to save all traces
     string gen_trace_dir;	// the directory for generating one specific trace
+    string flowInfoFile_str;    // first arr time of each flow
+    string pcap_dir;		// original pcap trace direcotry
+    string parsed_pcap_dir;	// directory of parsed pcap file
     
 
 public:
@@ -104,7 +105,7 @@ public:
     void hotspot_prob_b(bool = false);
     vector<b_rule> gen_seed_hotspot(size_t, size_t);
     vector<b_rule> evolve_pattern(const vector<b_rule> &);
-    void take_snapshot(string, double, double, int, bool = false);
+    void raw_snapshot(string, double, double);
 
     /* trace generation and evaluation
      * 1. pFlow_pruning_gen(string trace_root_dir): generate traces to the root directory with "Trace_Generate" sub-dir
@@ -112,20 +113,21 @@ public:
      * 3. f_pg_st(...): a single thread for mapping and generate traces
      * 4. flow_arr_mp(): obtain the start time of each flow for later use.
      * 5. f_arr_st(...): a single thread for counting the no. of packets for each flow
-     * 6. packet_count_mp(...): count the packet of each flow...  // deprecated
-     * 7. p_count_st(...): single thread method for packet_count... // deprecated
-     * 8. parse_pack_file_mp(string): process the file from pcap directory and process them into 5tup file
-     * 9.p_pf_st(vector<string>): obtain the pcap file in vector<string> and do it.
+     * 6. parse_pack_file_mp(string): process the file from pcap directory and process them into 5tup file
+     * 7. p_pf_st(vector<string>): obtain the pcap file in vector<string> and do it.
+     * 8. packet_count_mp(...): count the packet of each flow...  // deprecated
+     * 9. p_count_st(...): single thread method for packet_count... // deprecated
      */
     void pFlow_pruning_gen();
     void flow_pruneGen_mp(unordered_set<addr_5tup> &) const;
     void f_pg_st (fs::path, uint32_t, boost::unordered_map<addr_5tup, std::pair<uint32_t, addr_5tup> > *) const;
-    boost::unordered_set<addr_5tup> flow_arr_mp(string) const;
+    boost::unordered_set<addr_5tup> flow_arr_mp() const;
     boost::unordered_set<addr_5tup> f_arr_st (fs::path) const;
+    void parse_pcap_file_mp(size_t, size_t) const;
+    void p_pf_st(vector<string>, size_t) const;
+    
     void packet_count_mp(string, string);
     void p_count_st(fs::path, atomic_uint*, mutex *, boost::unordered_map<addr_5tup, uint32_t>*, atomic_bool *);
-    void parse_pack_file_mp(string, string, size_t, size_t) const;
-    void p_pf_st(vector<string>, size_t) const;
 };
 
 

@@ -15,6 +15,7 @@ add_definitions(-DBOOST_LOG_DYN_LINK)
 set(CAB Bucket.cpp BucketTree.cpp MicRuleTree.cpp RuleList.cpp OFswitch.cpp BucketTree.cpp TraceAnalyze.cpp TraceGen.cpp)
 add_library(cab ${CAB})
 add_executable(UnitTest UnitTest.cpp)
+add_executable(TracePrepare TracePrepare.cpp)
 
 if(UNIX)
 	target_link_libraries(
@@ -23,6 +24,15 @@ if(UNIX)
 		${Boost_LIBRARIES}
 		pthread
 		z
+		pcap
+		)
+	target_link_libraries(
+		TracePrepare
+		cab
+		${Boost_LIBRARIES}
+		pthread
+		z
+		pcap
 		)
 elseif(WIN32)
 elseif(APPLE)
