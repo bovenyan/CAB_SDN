@@ -9,7 +9,7 @@ using std::set;
 
 namespace fs = boost::filesystem;
 namespace io = boost::iostreams;
-void trace_plot_hp(string tracefile, string output) {
+void syn_trace_plot_hp(string tracefile, string output) {
     io::filtering_istream ref_trace_stream;
     ref_trace_stream.push(io::gzip_decompressor());
     ifstream ref_trace_file(tracefile);

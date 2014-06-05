@@ -11,6 +11,6 @@
 
 using std::string;
 
-void trace_plot_hp(string, string);
+void syn_trace_plot_hp(string, string);
 
 #endif

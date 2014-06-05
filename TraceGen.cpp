@@ -455,6 +455,147 @@ void tracer::raw_snapshot(string tracedir, double start_time, double interval) {
     }
 }
 
+
+const uint32_t mask_C = ((~uint32_t(0)) << 4);
+struct hostpair{
+	uint32_t pairs[2];
+	
+	hostpair(){pairs[0] = 0; pairs[1] = 0;}
+	
+	//hostpair(uint32_t i, uint32_t j){pairs[0] = i & mask_C; pairs[1] = j & mask_C;}
+	hostpair(uint32_t i, uint32_t j){pairs[0] = i ; pairs[1] = j;}
+	hostpair(const hostpair & hp){pairs[0] = hp.pairs[0]; pairs[1] = hp.pairs[1];}
+
+	bool operator ==(const hostpair & rhs) const{
+		return (pairs[0] == rhs.pairs[0] && pairs[1] == rhs.pairs[1]);
+	}
+
+	friend size_t hash_value(hostpair const & rhs){
+		size_t seed = 0;
+		boost::hash_combine(seed, rhs.pairs[0]);
+		boost::hash_combine(seed, rhs.pairs[1]);
+		return seed;
+	}
+
+};
+
+bool cmp(const hostpair & lhs, const hostpair & rhs){
+	if (lhs.pairs[0] < rhs.pairs[0])
+		return true;
+	if (lhs.pairs[0] == rhs.pairs[0] && lhs.pairs[1] < rhs.pairs[1])
+		return true;
+	return false;
+}
+
+void tracer::raw_hp_similarity(string tracedir, double measure_len, double duration, double interval, size_t sampling_time){
+    int data_no = measure_len/interval;
+    vector<double> stat(data_no, 0);
+
+    fs::path dir(tracedir);
+    vector<fs::path> to_proc_files;
+    
+    Path_Vec_T pvec;
+    if (fs::exists(dir) && fs::is_directory(dir)) {
+	std::copy(fs::directory_iterator(dir), fs::directory_iterator(), std::back_inserter(pvec));
+	std::sort(pvec.begin(), pvec.end());
+    }
+    else 
+	return;
+    
+    EpochT jesusBorn(-1,0);
+
+    if (duration > interval)
+	    interval = duration;
+
+    vector< vector<hostpair> > buffer;
+    double next_checkpoint = duration;
+    bool samp_wait = true;
+    size_t to_sample = sampling_time;
+
+    unordered_map<hostpair, size_t> recorder;
+    
+    for (Path_Vec_T::const_iterator it (pvec.begin()); it != pvec.end() && (to_sample != 0); ++it){
+	BOOST_LOG(tracer_log) << "processing" << it->c_str();
+	io::filtering_istream in;
+	in.push(io::gzip_decompressor());
+	ifstream infile(it->c_str());
+	in.push(infile);
+	string str;
+
+	if (jesusBorn < 0){
+		getline(in, str);
+		jesusBorn = EpochT(str);
+	}
+
+	for (string str; getline(in, str) && (to_sample != 0); ){
+		addr_5tup packet(str, jesusBorn);
+		if (samp_wait){
+			if (packet.timestamp > next_checkpoint){
+				samp_wait = false;
+				next_checkpoint += interval-duration;
+				vector<hostpair> hp_snapshot;
+
+				for (auto iter = recorder.begin(); iter != recorder.end(); ++iter){
+					if (iter->second <= 10)
+						continue;
+					hp_snapshot.push_back(iter->first);
+					std::sort(hp_snapshot.begin(), hp_snapshot.end(), cmp);
+				}
+				buffer.push_back(hp_snapshot);
+
+				if (buffer.size() == data_no+1){ // cal diff
+					BOOST_LOG(tracer_log) << "calculate ";
+					size_t counter = 0;
+					vector <hostpair> intersec = *buffer.begin();
+					for (auto iter = buffer.begin()+1; iter != buffer.end(); iter++){
+						vector<hostpair> res_intersec;	
+						//vector<hostpair> diff;
+						vector<hostpair> unio;
+						std::set_intersection(intersec.begin(), intersec.end(),
+								iter->begin(), iter->end(), 
+								std::back_inserter(res_intersec),
+								cmp);
+						//std::set_difference(buffer.begin()->begin(), buffer.begin()->end(), 
+						//		iter->begin(), iter->end(), std::back_inserter(diff),
+						//		cmp);
+						std::set_union(buffer.begin()->begin(), buffer.begin()->end(),
+								iter->begin(), iter->end(), std::back_inserter(unio),
+								cmp);
+						//BOOST_LOG(tracer_log) << diff.size() << "\t " << unio.size() ;
+						BOOST_LOG(tracer_log) << res_intersec.size() << "\t "<<unio.size();
+						//stat[counter] += double(diff.size())/double(unio.size());
+						stat[counter] += double(res_intersec.size())/double(unio.size());
+						intersec = res_intersec;
+						++counter;
+					}
+					buffer.erase(buffer.begin());
+					--to_sample;
+					BOOST_LOG(tracer_log) << to_sample << " more";
+				}
+
+				recorder.clear();
+			} 
+			hostpair hp(packet.addrs[0], packet.addrs[1]);
+			auto res = recorder.insert(std::make_pair(hp, 1));
+			if (!res.second) 
+				++recorder[hp];
+		}
+		else{
+			if (packet.timestamp > next_checkpoint){
+				samp_wait = true;
+				next_checkpoint += duration;
+			}
+		}
+	}
+    }
+    ofstream ff ("similarity.dat");
+    double dist = 0;
+    for (auto iter = stat.begin(); iter != stat.end(); ++iter){
+	dist += interval;
+    	ff << dist <<"\t"<< *iter/sampling_time<<endl;
+    }
+}
+
 // ===================================== Trace Generation and Evaluation =========================
 
 /* pFlow_pruning_gen

@@ -43,6 +43,7 @@ namespace io = boost::iostreams;
 
 class tracer
 {
+    boost::log::sources::logger tracer_log;
 public:
     double flow_rate;
     double cold_prob;
@@ -95,7 +96,8 @@ public:
      * 6. hotspot_prob_b: probing the hotspot with a reference file. bool specify whether to mutate the hot area
      * 7. vector<b_rule> gen_seed_hotspot(size_t prepair_no, size_t max_rule): generate seed hotspot for evolving
      * 8. vector<b_rule> evolve_patter(const vector<b_rule> & seed): evolve the seed and generate new hotspots
-     * 8. take_snapshot(...): this takes a snapshot (file, start_time, interval, sample_time, whether_do_rule_check) 
+     * 9. raw_snapshot(...): this takes a snapshot (file, start_time, interval, sample_time, whether_do_rule_check) 
+     * 10.raw_hp_similarity(...): this calculates the host-pair similarity among different periods.
      */
     void trace_get_ts(string);
     vector<fs::path> get_proc_files(string) const;
@@ -106,6 +108,7 @@ public:
     vector<b_rule> gen_seed_hotspot(size_t, size_t);
     vector<b_rule> evolve_pattern(const vector<b_rule> &);
     void raw_snapshot(string, double, double);
+    void raw_hp_similarity(string, double, double, double, size_t = 10);
 
     /* trace generation and evaluation
      * 1. pFlow_pruning_gen(string trace_root_dir): generate traces to the root directory with "Trace_Generate" sub-dir
