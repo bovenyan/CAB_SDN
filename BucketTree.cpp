@@ -17,7 +17,7 @@ bucket_tree::bucket_tree() {
     thres_soft = 0;
 }
 
-bucket_tree::bucket_tree(rule_list & rL, uint32_t thr, double pa_perc) {
+bucket_tree::bucket_tree(rule_list & rL, uint32_t thr, bool test_bed, double pa_perc) {
     thres_hard = thr;
     thres_soft = thr*2;
     rList = &rL;
@@ -25,7 +25,7 @@ bucket_tree::bucket_tree(rule_list & rL, uint32_t thr, double pa_perc) {
     for (uint32_t i = 0; i < rL.list.size(); i++)
         root->related_rules.insert(root->related_rules.end(), i);
 
-    gen_candi_split();
+    gen_candi_split(test_bed);
     splitNode_fix(root);
 
     pa_rule_no = 1500 * pa_perc;
@@ -105,24 +105,33 @@ void bucket_tree::check_static_hit(const b_rule & traf_block, bucket* buck, set<
 }
 
 
-void bucket_tree::gen_candi_split(size_t cut_no) {
-    if (cut_no == 0) {
-        vector<size_t> base(4,0);
-        candi_split.push_back(base);
+void bucket_tree::gen_candi_split(bool test_bed, size_t cut_no) {
+    if (test_bed) {
+	vector<size_t> base(4,0);
+	for (size_t i = 0; i <= cut_no; ++i){
+	    base[0] = i;
+	    base[1] = cut_no - i;
+	    candi_split.push_back(base);
+	}
     } else {
-        gen_candi_split(cut_no-1);
-        vector< vector<size_t> > new_candi_split;
-        if (cut_no > 1)
-            new_candi_split = candi_split;
+        if (cut_no == 0) {
+            vector<size_t> base(4,0);
+            candi_split.push_back(base);
+        } else {
+            gen_candi_split(test_bed, cut_no-1);
+            vector< vector<size_t> > new_candi_split;
+            if (cut_no > 1)
+                new_candi_split = candi_split;
 
-        for (auto iter = candi_split.begin(); iter != candi_split.end(); ++iter) {
-            for (size_t i = 0; i < 4; ++i) {
-                vector<size_t> base = *iter;
-                ++base[i];
-                new_candi_split.push_back(base);
+            for (auto iter = candi_split.begin(); iter != candi_split.end(); ++iter) {
+                for (size_t i = 0; i < 4; ++i) {
+                    vector<size_t> base = *iter;
+                    ++base[i];
+                    new_candi_split.push_back(base);
+                }
             }
+            candi_split = new_candi_split;
         }
-        candi_split = new_candi_split;
     }
 }
 
@@ -563,6 +572,7 @@ void bucket_tree::print_tree(const string & filename, bool det) { // const
     print_bucket(out, root, det);
     out.close();
 }
+
 
 
 

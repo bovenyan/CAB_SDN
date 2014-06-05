@@ -56,10 +56,13 @@ private:
     double duration;
     double data_rate;
     const double offset;
+    EpochT jesusBorn;
     double terminT;
     atomic_uint total_packet;
     uint32_t mut_scalar[2];
     string hotspot_ref;
+    double evolving_time;
+    size_t evolving_no;
 
     // locality traffic parameter
     string hotcandi_str;	// hotspot candi file
@@ -123,6 +126,7 @@ public:
      */
     void pFlow_pruning_gen();
     void flow_pruneGen_mp(unordered_set<addr_5tup> &) const;
+    void flow_pruneGen_mp_ev(unordered_set<addr_5tup> &) const;
     void f_pg_st (fs::path, uint32_t, boost::unordered_map<addr_5tup, std::pair<uint32_t, addr_5tup> > *) const;
     boost::unordered_set<addr_5tup> flow_arr_mp() const;
     boost::unordered_set<addr_5tup> f_arr_st (fs::path) const;

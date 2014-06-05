@@ -14,7 +14,7 @@ public:
     std::vector<size_t> occupancy;
 
     rule_list();
-    rule_list(std::string &);
+    rule_list(std::string &, bool = false);
     void obtain_dep();
     r_rule get_micro_rule (const addr_5tup &);
     int linear_search(const addr_5tup &);

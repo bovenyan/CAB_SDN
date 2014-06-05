@@ -124,6 +124,8 @@ class pref_addr {
     inline pref_addr();
     inline pref_addr(const pref_addr &);
     inline pref_addr(const std::string &);
+    
+    inline bool operator==(const pref_addr &) const;
 
     inline bool match (const pref_addr &) const;
     inline bool hit (const uint32_t &) const;
@@ -358,6 +360,14 @@ inline pref_addr::pref_addr(const string & prefstr) {
 inline pref_addr::pref_addr(const pref_addr & pa) {
     pref = pa.pref;
     mask = pa.mask;
+}
+
+inline bool pref_addr::operator==(const pref_addr & rhs) const{
+	if (pref != rhs.pref)
+		return false;
+	if (mask != rhs.mask)
+		return false;
+	return true;
 }
 
 inline bool pref_addr::hit(const uint32_t & ad) const {
