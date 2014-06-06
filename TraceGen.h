@@ -53,11 +53,8 @@ public:
 private:
     rule_list * rList;
     uint32_t flow_no;
-    double duration;
-    double data_rate;
-    const double offset;
+    double simuT;
     EpochT jesusBorn;
-    double terminT;
     atomic_uint total_packet;
     uint32_t mut_scalar[2];
     string hotspot_ref;
@@ -73,11 +70,13 @@ private:
 
     // sources and gen
     string trace_root_dir; 	// the root directory to save all traces
-    string gen_trace_dir;	// the directory for generating one specific trace
     string flowInfoFile_str;    // first arr time of each flow
     string pcap_dir;		// original pcap trace direcotry
     string parsed_pcap_dir;	// directory of parsed pcap file
-    
+   
+    // intermediate
+    vector<string> to_proc_files;
+    string gen_trace_dir;	// the directory for generating one specific trace
 
 public:
     tracer();
@@ -85,25 +84,25 @@ public:
 
     /* parameter settings 
      * 1. set_para (string para_file): setting the trace generation parameter using a parameter file
-     * 2. print_setup (): print the current parameter setting
+     * 2. vector<fs::path> get_proc_files(string): the vector return version of trace_get_ts() 
+     * 3. print_setup (): print the current parameter setting
      */
     void set_para(string); 
+    void get_proc_files();
     void print_setup() const;
 
     /* toolkit 
      * 1. trace_get_ts(string trace_ts_file): get the timestamp of the first packet of the traces and record as "path \t ts"
-     * 2. vector<fs::path> get_proc_files(string): the vector return version of trace_get_ts() 
-     * 3. uint32_t count_proc(): counts the no. of processors in this machine
-     * 4. merge_files(string gen_trace_dir): merge the file with format "/ptrace-" and put them into the "gen_trace_dir"
-     * 5. hotspot_prob: probing the hotspot
-     * 6. hotspot_prob_b: probing the hotspot with a reference file. bool specify whether to mutate the hot area
-     * 7. vector<b_rule> gen_seed_hotspot(size_t prepair_no, size_t max_rule): generate seed hotspot for evolving
-     * 8. vector<b_rule> evolve_patter(const vector<b_rule> & seed): evolve the seed and generate new hotspots
-     * 9. raw_snapshot(...): this takes a snapshot (file, start_time, interval, sample_time, whether_do_rule_check) 
-     * 10.raw_hp_similarity(...): this calculates the host-pair similarity among different periods.
+     * 2. uint32_t count_proc(): counts the no. of processors in this machine
+     * 3. merge_files(string gen_trace_dir): merge the file with format "/ptrace-" and put them into the "gen_trace_dir"
+     * 4. hotspot_prob: probing the hotspot
+     * 5. hotspot_prob_b: probing the hotspot with a reference file. bool specify whether to mutate the hot area
+     * 6. vector<b_rule> gen_seed_hotspot(size_t prepair_no, size_t max_rule): generate seed hotspot for evolving
+     * 7. vector<b_rule> evolve_patter(const vector<b_rule> & seed): evolve the seed and generate new hotspots
+     * 8. raw_snapshot(...): this takes a snapshot (file, start_time, interval, sample_time, whether_do_rule_check) 
+     * 9.raw_hp_similarity(...): this calculates the host-pair similarity among different periods.
      */
     void trace_get_ts(string);
-    vector<fs::path> get_proc_files(string) const;
     friend uint32_t count_proc();
     void merge_files(string) const;
     void hotspot_prob(string);
@@ -124,12 +123,12 @@ public:
      * 8. packet_count_mp(...): count the packet of each flow...  // deprecated
      * 9. p_count_st(...): single thread method for packet_count... // deprecated
      */
-    void pFlow_pruning_gen();
+    void pFlow_pruning_gen(bool);
     void flow_pruneGen_mp(unordered_set<addr_5tup> &) const;
     void flow_pruneGen_mp_ev(unordered_set<addr_5tup> &) const;
-    void f_pg_st (fs::path, uint32_t, boost::unordered_map<addr_5tup, std::pair<uint32_t, addr_5tup> > *) const;
+    void f_pg_st (string, uint32_t, boost::unordered_map<addr_5tup, std::pair<uint32_t, addr_5tup> > *) const;
     boost::unordered_set<addr_5tup> flow_arr_mp() const;
-    boost::unordered_set<addr_5tup> f_arr_st (fs::path) const;
+    boost::unordered_set<addr_5tup> f_arr_st (string) const;
     void parse_pcap_file_mp(size_t, size_t) const;
     void p_pf_st(vector<string>, size_t) const;
     

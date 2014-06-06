@@ -36,18 +36,21 @@ int main() {
     srand (time(NULL));
     logging_init();
     string rulefile = "../para_src/rule4000";
-    rule_list rList(rulefile);
+    rule_list rList(rulefile, true);
+    rList.print("../para_src/rList.dat");
     
     // generate bucket tree
-    /*
-    bucket_tree bTree(rList, 15);
+    bucket_tree bTree(rList, 15, true);
     bTree.pre_alloc();
-    */
+    bTree.print_tree("../para_src/tree_pr.dat");
 
     // trace generation
     tracer tGen(&rList);
     tGen.set_para("../para_src/para_file.txt");
+    tGen.hotspot_prob_b(false);
+    tGen.pFlow_pruning_gen(true);
+
     //tGen.raw_snapshot("./Packet_File/sample-10-12", 10, 300);
-    tGen.raw_hp_similarity("./Packet_File/sample-10-12", 3600, 30, 120, 20);
+    //tGen.raw_hp_similarity("./Packet_File/sample-10-12", 3600, 30, 120, 20);
     //tGen.parse_pcap_file_mp(557,594);
 }

@@ -18,7 +18,7 @@ rule_list::rule_list(string & filename, bool test_bed) {
     string sLine = "";
     getline(file, sLine);
     while (!file.eof()) {
-        p_rule sRule(sLine);
+        p_rule sRule(sLine, test_bed);
         list.push_back(sRule);
         getline(file, sLine);
     }
@@ -27,10 +27,11 @@ rule_list::rule_list(string & filename, bool test_bed) {
 
     if (test_bed) { // remove rule with same hostpair
         for(auto iter = list.begin(); iter != list.end(); ++iter) {
-            for (auto iter_cp = iter; iter_cp != list.end(); ) {
-                if (*iter == *iter_cp) {
+            for (auto iter_cp = iter+1; iter_cp != list.end(); ) {
+                if (*iter == *iter_cp) 
                     iter_cp = list.erase(iter_cp);
-                }
+		else
+			++iter_cp;
             }
         }
     }

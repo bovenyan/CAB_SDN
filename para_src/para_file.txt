@@ -1,18 +1,16 @@
-p_arr	10000
 f_arr	20
-simu_T	600
+simu_T	60
 hot_no	10
 hot_arr	20
 c_prob	0.01
 hr_thres	10
-h_candi_no	200
+h_candi_no	40
 hot_ref	../para_src/tree_pr.dat
 hot_c	../para_src/hotspot.dat
-mutate_scalar	6 1
+mutate scalar	4 1
 root dir	./Trace_Generate
-trace gen dir	./Trace_Generate
 flow arrival file	../para_src/flow_info
 pcap dir	/mnt/Day0/CAP_NIC1
-parsed pcap dir	./Packet_File
-evolving interval	300
+parsed pcap dir	./Packet_File/sample-10-12
+evolving interval	20
 evolving no	10

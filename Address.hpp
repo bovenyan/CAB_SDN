@@ -33,8 +33,15 @@ class EpochT{
 
 	inline EpochT(const EpochT & rhs){
 		sec = rhs.sec;
-		msec = rhs.sec;
+		msec = rhs.msec;
 	}
+
+	/*
+	inline EpochT& operator=(const EpochT & rhs){
+		sec = rhs.sec;
+		msec = rhs.msec;
+		return *this;
+	}*/
 
 	inline EpochT operator+(const double & dtime) const{
 		long sec = this->sec + int(dtime);
