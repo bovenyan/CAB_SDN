@@ -35,18 +35,18 @@ class bucket_tree {
 
   public:
     bucket_tree();
-    bucket_tree(rule_list &, uint32_t, double = 0.1);
+    bucket_tree(rule_list &, uint32_t, bool test_bed = false, double = 0.1);
     ~bucket_tree();
 
     std::pair<bucket *, int> search_bucket(const addr_5tup &, bucket* ) const;
     bucket * search_bucket_seri(const addr_5tup &, bucket* ) const;
-    void check_static_hit(const b_rule &, bucket*, std::set<size_t> &, size_t &) ;
+    void check_static_hit(const b_rule &, bucket*, std::set<size_t> &, size_t &);
     void pre_alloc();
     void dyn_adjust();
 
   private:
     // static related
-    void gen_candi_split(size_t = 2);
+    void gen_candi_split(bool, size_t = 2);
     void splitNode_fix(bucket * = NULL);
     void INOallocDet(bucket *, std::vector<uint32_t> &) const;
     void INOpruning(bucket *);

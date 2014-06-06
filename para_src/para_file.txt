@@ -14,3 +14,5 @@ trace gen dir	./Trace_Generate
 flow arrival file	../para_src/flow_info
 pcap dir	/mnt/Day0/CAP_NIC1
 parsed pcap dir	./Packet_File
+evolving interval	300
+evolving no	10

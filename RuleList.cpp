@@ -12,7 +12,7 @@ using std::string;
  */
 rule_list::rule_list() {}
 
-rule_list::rule_list(string & filename) {
+rule_list::rule_list(string & filename, bool test_bed) {
     ifstream file;
     file.open(filename.c_str());
     string sLine = "";
@@ -24,6 +24,16 @@ rule_list::rule_list(string & filename) {
     }
     occupancy = vector<size_t>(list.size(), 0);
     file.close();
+
+    if (test_bed) { // remove rule with same hostpair
+        for(auto iter = list.begin(); iter != list.end(); ++iter) {
+            for (auto iter_cp = iter; iter_cp != list.end(); ) {
+                if (*iter == *iter_cp) {
+                    iter_cp = list.erase(iter_cp);
+                }
+            }
+        }
+    }
 }
 
 /* member func
@@ -102,6 +112,7 @@ void rule_list::rule_dep_analysis() {
         ff<<endl;
     }
 }
+
 
 
 

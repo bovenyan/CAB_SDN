@@ -30,11 +30,13 @@ typedef vector<fs::path> Path_Vec_T;
 tracer::tracer():offset(346.844), total_packet(0) {
     rList = NULL;
     flow_no = 0;
+    jesusBorn = EpochT(-1,0);
 }
 
 tracer::tracer(rule_list * rL):offset(346.844), total_packet(0) {
     rList = rL;
     flow_no = 0;
+    jesusBorn = EpochT(-1,0);
 }
 
 
@@ -104,7 +106,12 @@ void tracer::set_para(string loc_para_str) {
 	if (!temp[0].compare("parsed pcap dir")){
 	    parsed_pcap_dir = temp[1];
 	}
-
+	if (!temp[0].compare("evolving time")){
+		evolving_time = boost::lexical_cast<double>(temp[1]);
+	}
+	if (!temp[0].compare("evolving no")){
+		evolving_no = boost::lexical_cast<size_t> (temp[1]);
+	}
     }
 }
 
@@ -653,7 +660,6 @@ void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo) const {
     	cout<<"creating: "<<gen_trace_dir<<endl;
     else
     	cout<<"exists:   "<<gen_trace_dir<<endl;
-    
 
     std::multimap<double, addr_5tup> ts_prune_map;
     for (unordered_set<addr_5tup>::iterator iter=flowInfo.begin(); iter != flowInfo.end(); ++iter) {
@@ -721,7 +727,6 @@ void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo) const {
             hotspot_queue.push_back(hr);
             nextKickOut += hotvtime;
         }
-
     }
     cout << "after smoothing, average: " << double(total_header)/duration <<endl;
 
@@ -751,6 +756,137 @@ void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo) const {
     return;
 }
 
+void tracer::flow_pruneGen_mp_ev( unordered_set<addr_5tup> & flowInfo) const {
+    if (fs::create_directory(fs::path(gen_trace_dir)))
+    	cout<<"creating: "<<gen_trace_dir<<endl;
+    else
+    	cout<<"exists:   "<<gen_trace_dir<<endl;
+
+    std::multimap<double, addr_5tup> ts_prune_map;
+    for (unordered_set<addr_5tup>::iterator iter=flowInfo.begin(); iter != flowInfo.end(); ++iter) {
+        ts_prune_map.insert(std::make_pair(iter->timestamp, *iter));
+    }
+    cout << "total flow no. : " << ts_prune_map.size() <<endl;
+
+    // prepair hot spots
+    vector<h_rule> hotspot_seed;
+    ifstream in (hotcandi_str);
+    
+    for (string str; getline(in, str); ){
+        vector<string> temp;
+        boost::split(temp, str, boost::is_any_of("\t"));
+
+        if (boost::lexical_cast<uint32_t>(temp.back()) > hot_rule_thres) {
+        	h_rule hr(str, rList->list);
+		hotspot_seed.push_back(hr);
+	}
+    }
+
+    random_shuffle(hotspot_seed.begin(), hotspot_seed.end());
+    if (hot_candi_no > hotspot_seed.size()){
+    	cout<<"revert to: " << hotspot_seed.size() << " hotspots"<<endl;
+    }
+    else{
+	hotspot_seed = vector<h_rule>(hotspot_seed.begin(), hotspot_seed.begin()+hot_candi_no);
+    }
+    vector<h_rule> hotspot_vec;
+
+    for (auto iter = hotspot_seed.begin(); iter != hotspot_seed.end(); ++iter){
+	    h_rule hr = *iter;
+	    hr.mutate_pred(mut_scalar[0], mut_scalar[1]);
+	    hotspot_vec.push_back(hr);
+    }
+
+    list<h_rule> hotspot_queue;
+    auto cur_hot_iter = hotspot_vec.begin() + hotspot_no;
+    for (size_t i = 0; i < hotspot_no; i++){
+	h_rule hr = hotspot_vec[i];
+	hotspot_queue.push_back(hr);
+    }
+
+    // smoothing every 10 sec, map the headers
+    boost::unordered_map<addr_5tup, pair<uint32_t, addr_5tup> > pruned_map;
+    const double smoothing_interval = 10.0;
+    double next_checkpoint = offset + smoothing_interval;
+    double flow_thres = 10* flow_rate;
+    vector< addr_5tup > header_buf;
+    header_buf.reserve(3000);
+    uint32_t id = 0;
+    uint32_t total_header = 0;
+    double nextKickOut = hotvtime;
+    double nextEvolving = evolving_time;
+
+    for (auto iter = ts_prune_map.begin(); iter != ts_prune_map.end(); ++iter) {
+        if (iter->first > next_checkpoint) {
+            random_shuffle(header_buf.begin(), header_buf.end());
+            uint32_t i = 0 ;
+            for (i = 0; i < flow_thres && i < header_buf.size(); ++i) {
+                addr_5tup header;
+                /*if ((double) rand() /RAND_MAX < (1-cold_prob)) { // no noise
+                    auto q_iter = hotspot_queue.begin();
+                    advance(q_iter, rand()%hotspot_no);
+                    header = q_iter->gen_header();
+                } else {
+		*/
+                header = rList->list[(rand()%(rList->list.size()))].get_random();
+                pruned_map.insert( std::make_pair(header_buf[i], std::make_pair(id, header)));
+                ++id;
+            }
+            total_header += i;
+            header_buf.clear();
+            next_checkpoint += smoothing_interval;
+        }
+        header_buf.push_back(iter->second);
+
+        if (iter->first > nextKickOut) {
+            hotspot_queue.pop_front();
+	    if (cur_hot_iter == hotspot_vec.end())
+		    cur_hot_iter = hotspot_vec.begin();
+            hotspot_queue.push_back(*cur_hot_iter);
+	    ++cur_hot_iter;
+            nextKickOut += hotvtime;
+	}
+	
+	if (iter->first > nextEvolving){
+	    vector<int> choice;
+	    for (int i = 0; i < hotspot_vec.size(); ++i)
+		    choice.push_back(i);
+	    random_shuffle(choice.begin(), choice.end());
+	    for (int i = 0; i < evolving_no; ++i){
+	    	h_rule hr = hotspot_seed[choice[i]];
+		hr.mutate_pred(mut_scalar[0], mut_scalar[1]);
+		hotspot_vec[choice[i]] = hr;
+	    }
+	    nextEvolving += evolving_time;
+	}
+    }
+    cout << "after smoothing, average: " << double(total_header)/duration <<endl;
+
+    // process using multi-thread;
+    fs::path temp1(gen_trace_dir+"/IDtrace");
+    fs::create_directory(temp1);
+    fs::path temp2(gen_trace_dir+"/GENtrace");
+    fs::create_directory(temp2);
+
+
+    vector< std::future<void> > results_exp;
+    vector< fs::path> to_proc_files = get_proc_files(parsed_pcap_dir);
+
+    for(uint32_t file_id = 0; file_id < to_proc_files.size(); ++file_id) {
+        results_exp.push_back(std::async(std::launch::async, &tracer::f_pg_st, this, to_proc_files[file_id], file_id, &pruned_map));
+    }
+
+    for (uint32_t file_id = 0; file_id < to_proc_files.size(); ++file_id) {
+        results_exp[file_id].get();
+    }
+
+    cout<< "Merging Files... "<<endl;
+    merge_files(gen_trace_dir+"/IDtrace");
+    merge_files(gen_trace_dir+"/GENtrace");
+
+    cout<<"Generation Finished. Enjoy :)" << endl;
+    return;
+}
 
 void tracer::f_pg_st(fs::path ref_file, uint32_t id, boost::unordered_map<addr_5tup, pair<uint32_t, addr_5tup> > * map_ptr) const {
     cout << "Processing " << ref_file.c_str() << endl;

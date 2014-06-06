@@ -16,7 +16,8 @@ class p_rule {
   public:
     inline p_rule();
     inline p_rule(const p_rule &);
-    inline p_rule(const std::string &);
+    inline p_rule(const std::string &, bool = false);
+    inline bool operator==(const p_rule &) const;
 
     inline bool dep_rule(const p_rule &) const;
     inline bool packet_hit(const addr_5tup &) const;
@@ -111,16 +112,34 @@ inline p_rule::p_rule(const p_rule & pr) {
     hit = pr.hit;
 }
 
-inline p_rule::p_rule(const string & rule_str) {
+inline p_rule::p_rule(const string & rule_str, bool test_bed) {
     vector<string> temp;
     boost::split(temp, rule_str, boost::is_any_of("\t"));
     temp[0].erase(0,1);
     hostpair[0] = pref_addr(temp[0]);
     hostpair[1] = pref_addr(temp[1]);
-    portpair[0] = range_addr(temp[2]);
-    portpair[1] = range_addr(temp[3]);
+
+    if (test_bed) {
+        portpair[0] = range_addr();
+        portpair[1] = range_addr();
+    } else {
+        portpair[0] = range_addr(temp[2]);
+        portpair[1] = range_addr(temp[3]);
+    }
     proto = true;
     hit = false;
+}
+
+inline bool p_rule::operator==(const p_rule & rhs) const {
+    if (!(hostpair[0] == rhs.hostpair[0]))
+        return false;
+    if (!(hostpair[1] == rhs.hostpair[1]))
+        return false;
+    if (!(portpair[0] == rhs.portpair[0]))
+        return false;
+    if (!(portpair[1] == rhs.portpair[1]))
+        return false;
+    return true;
 }
 
 /* member fuctions
@@ -432,5 +451,7 @@ inline addr_5tup h_rule::gen_header() {
 }
 
 #endif
+
+
 
 
