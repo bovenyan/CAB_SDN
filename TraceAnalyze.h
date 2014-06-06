@@ -8,9 +8,12 @@
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/filesystem.hpp>
+#include "RuleList.h"
 
 using std::string;
 
 void syn_trace_plot_hp(string, string);
+
+void syn_trace_measure(rule_list &, string, string);
 
 #endif

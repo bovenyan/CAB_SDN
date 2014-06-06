@@ -184,7 +184,6 @@ void tracer::get_proc_files () {
                     in.push(infile);
                     string str;
                     getline(in,str);
-		    cout<<str<<endl;
 		    
 		    if (jesusBorn < 0){ // init jesusBorn
 			EpochT time (str);
@@ -193,15 +192,12 @@ void tracer::get_proc_files () {
 
                     addr_5tup packet(str, jesusBorn); // readable
 
-		    string file_name = it->string();
-		    cout << "before" << file_name<<endl;
-		    cout << packet.timestamp << "v.s " << simuT << endl;
                     if (packet.timestamp > simuT) {
                         io::close(in);
                         break;
 		    }
 
-                    to_proc_files.push_back(file_name);
+                    to_proc_files.push_back(it->string());
                     io::close(in);
             } catch(const io::gzip_error & e) {
                 cout<<e.what()<<endl;
@@ -316,7 +312,6 @@ void tracer::hotspot_prob_b(bool mutation) {
     vector <string> file;
     ifstream in (hotspot_ref);
 
-    cout << "hot_rule_thres " << hot_rule_thres <<endl;
     if (mutation)
         cout <<"mutation scalar " << mut_scalar[0] << " " << mut_scalar[1] << endl;
 
@@ -614,13 +609,9 @@ void tracer::raw_hp_similarity(string tracedir, double measure_len, double durat
 void tracer::pFlow_pruning_gen(bool evolving) {
     // init processing file
     if (to_proc_files.size() == 0){
-	   cout << "I did this frak" <<endl;
     	get_proc_files();
     }
-
-    for(auto iter = to_proc_files.begin(); iter != to_proc_files.end(); ++iter)
-	    cout << *iter <<endl;
-
+    
     // create root dir
     fs::path dir(trace_root_dir);
     if (fs::create_directory(dir)) {
@@ -630,6 +621,7 @@ void tracer::pFlow_pruning_gen(bool evolving) {
     }
 
     // get the arrival time of each flow.
+    cout << "Generating flow arrival file ... ..."<<endl;
     unordered_set<addr_5tup> flowInfo;
     if (fs::exists(fs::path(flowInfoFile_str))){
         ifstream infile(flowInfoFile_str.c_str());
@@ -640,9 +632,10 @@ void tracer::pFlow_pruning_gen(bool evolving) {
             flowInfo.insert(packet);
         }
         infile.close();
-        cout << "read flow info successful" <<endl;
+        cout << "Warning: using old flowInfo file" <<endl;
     } else{
         flowInfo = flow_arr_mp();
+	cout << "flowInfo file generated" <<endl;
     }
 
     // trace generated in format of  "trace-200k-0.05-20"
@@ -724,7 +717,6 @@ void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo) const {
         header_buf.push_back(iter->second);
 
         if (iter->first > nextKickOut) {
-            //ff<<hotspot_queue.front().get_str()<<"\t"<<iter->first<<endl;
             hotspot_queue.pop_front();
             string line;
             if (!getline(in, line)) {
@@ -924,6 +916,8 @@ void tracer::f_pg_st(string ref_file, uint32_t id, boost::unordered_map<addr_5tu
 
     for (string str; getline(in, str); ) {
         addr_5tup packet (str, jesusBorn); // readable;
+	if (packet.timestamp > simuT)
+		break;
         auto iter = map_ptr->find(packet);
         if (iter != map_ptr->end()) {
             packet.copy_header(iter->second.second);

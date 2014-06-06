@@ -1,5 +1,5 @@
 f_arr	20
-simu_T	60
+simu_T	1800
 hot_no	10
 hot_arr	20
 c_prob	0.01

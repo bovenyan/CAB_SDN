@@ -16,6 +16,7 @@ set(CAB Bucket.cpp BucketTree.cpp MicRuleTree.cpp RuleList.cpp OFswitch.cpp Buck
 add_library(cab ${CAB})
 add_executable(UnitTest UnitTest.cpp)
 add_executable(TracePrepare TracePrepare.cpp)
+add_executable(TraceExam TraceExam.cpp)
 
 if(UNIX)
 	target_link_libraries(
@@ -33,6 +34,12 @@ if(UNIX)
 		pthread
 		z
 		pcap
+		)
+	target_link_libraries(
+		TraceExam
+		cab
+		${Boost_LIBRARIES}
+		z
 		)
 elseif(WIN32)
 elseif(APPLE)

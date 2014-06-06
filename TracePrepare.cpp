@@ -48,7 +48,7 @@ int main() {
     tracer tGen(&rList);
     tGen.set_para("../para_src/para_file.txt");
     tGen.hotspot_prob_b(false);
-    tGen.pFlow_pruning_gen(true);
+    tGen.pFlow_pruning_gen(false);
 
     //tGen.raw_snapshot("./Packet_File/sample-10-12", 10, 300);
     //tGen.raw_hp_similarity("./Packet_File/sample-10-12", 3600, 30, 120, 20);
