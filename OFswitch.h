@@ -17,7 +17,6 @@
 class OFswitch
 {
 public:
-    const double offset;
     rule_list * rList;
     bucket_tree * bTree;
 
@@ -29,7 +28,6 @@ public:
 
 public:
     OFswitch();
-    OFswitch(double);
 
     void set_para(std::string, rule_list * = NULL, bucket_tree * = NULL);
     void run_test();

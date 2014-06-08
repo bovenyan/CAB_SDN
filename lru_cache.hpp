@@ -245,12 +245,12 @@ inline void lru_cache_cab::insert(const bucket* pbuck, const double & time)
     cache.insert(container_T::value_type(pbuck, time)); // insert bucket
     for (auto iter = pbuck->related_rules.begin(); iter != pbuck->related_rules.end(); iter++)
     {
-        // rule_down_count += 1;  // controller does not know which rules are kept in OFswtich
+        ++rule_down_count;  // controller does not know which rules are kept in OFswtich
         auto ins_rule_result = flow_table.insert(std::make_pair(*iter, 1));
         if (!ins_rule_result.second)
             ++ins_rule_result.first->second;
-        else
-            ++rule_down_count; // controller knows which rules are kept in OFswitch
+        //else
+        //    ++rule_down_count; // controller knows which rules are kept in OFswitch
     }
 
     while(cache.size() + flow_table.size() > _capacity)   // kick out

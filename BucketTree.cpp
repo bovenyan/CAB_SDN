@@ -17,7 +17,7 @@ bucket_tree::bucket_tree() {
     thres_soft = 0;
 }
 
-bucket_tree::bucket_tree(rule_list & rL, uint32_t thr, bool test_bed, double pa_perc) {
+bucket_tree::bucket_tree(rule_list & rL, uint32_t thr, bool test_bed, size_t pa_no ) {
     thres_hard = thr;
     thres_soft = thr*2;
     rList = &rL;
@@ -28,7 +28,7 @@ bucket_tree::bucket_tree(rule_list & rL, uint32_t thr, bool test_bed, double pa_
     gen_candi_split(test_bed);
     splitNode_fix(root);
 
-    pa_rule_no = 1500 * pa_perc;
+    pa_rule_no = pa_no;
 }
 
 bucket_tree::~bucket_tree() {

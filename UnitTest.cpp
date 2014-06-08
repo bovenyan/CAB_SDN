@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Address.hpp"
 #include "Rule.hpp"
 #include "RuleList.h"
 #include "BucketTree.h"
@@ -70,18 +71,18 @@ int main() {
     srand (time(NULL));
     logging_init();
     string rulefile = "../para_src/rule4000";
-    rule_list rList(rulefile);
+    rule_list rList(rulefile, true);
 
     // generate bucket tree
-    bucket_tree bTree(rList, 15);
+    bucket_tree bTree(rList, 20, true);
     //bTree.print_tree("../para_src/tree.dat", false);
-    bTree.pre_alloc();
-    bTree.print_tree("../para_src/tree_pr.dat", false);
+    //bTree.pre_alloc();
+    //bTree.print_tree("../para_src/tree_pr.dat", false);
     //bTree.print_tree("../para_src/tree_pr_det.dat", true);
 
     // trace generation
-    tracer tGen(&rList);
-    tGen.set_para("../para_src/para_file.txt");
+    //tracer tGen(&rList);
+    //tGen.set_para("../para_src/para_file.txt");
     // tGen.hotspot_prob_b(true);
     // tGen.pFlow_pruning_gen("..");
 
@@ -90,8 +91,8 @@ int main() {
     // static test
     // bTree.static_traf_test("../para_src/hotspot.dat_m");
     // evolving test
-    bucket_tree bTree_static(rList, 20);
-    evolving_bucket_test(tGen, bTree, bTree_static, 23);
+    //bucket_tree bTree_static(rList, 20);
+    //evolving_bucket_test(tGen, bTree, bTree_static, 23);
     /*
     vector<b_rule> seed_hotspot = tGen.gen_seed_hotspot(80, 40);
     vector<b_rule> start_from = tGen.evolve_pattern(seed_hotspot);
@@ -104,6 +105,11 @@ int main() {
     */
 
     // unit test: buck_tree generation and search
+    string str = "0.00%167772161%167772162%4000%8000%6";
+    addr_5tup packet(str);
+    auto res = bTree.search_bucket(packet, bTree.root);
+    cout<<res.first->get_str()<<endl;
+    
     // bTree.search_test("../Trace_Generate/trace-20k-0.01-10/GENtrace/ref_trace.gz");
 
     // unit test: bucket split

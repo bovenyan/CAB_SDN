@@ -1,10 +1,10 @@
-f_arr	20
+f_arr	100
 simu_T	1800
-hot_no	10
+hot_no	20
 hot_arr	20
-c_prob	0.01
+c_prob	0.001
 hr_thres	10
-h_candi_no	40
+h_candi_no	80
 hot_ref	../para_src/tree_pr.dat
 hot_c	../para_src/hotspot.dat
 mutate scalar	4 1

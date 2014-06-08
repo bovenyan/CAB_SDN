@@ -7,10 +7,9 @@ using std::ifstream;
 /* Constructor:
  *
  * method brief:
- * set offset as 346.844 by DOE trace, arrival time of first packet
  */
 
-OFswitch::OFswitch():offset(346.844) {
+OFswitch::OFswitch() {
     rList = NULL;
     bTree = NULL;
 
@@ -22,7 +21,6 @@ OFswitch::OFswitch():offset(346.844) {
 
 /* Constructor:
  *
- * input: double ofs :  Offset of the traces
  *
  * method brief:
  * same as default
@@ -97,11 +95,11 @@ void OFswitch::CABtest_rt_TCAM() {
 
         string str; // tune curT to that of first packet
         getline(in,str);
-        addr_5tup first_packet(str, false);
+        addr_5tup first_packet(str);
         curT = first_packet.timestamp;
 
         while(getline(in, str)) {
-            addr_5tup packet(str, false);
+            addr_5tup packet(str);
             curT = packet.timestamp;
             auto res = flow_rec.insert(packet);
             bucket* buck = bTree->search_bucket(packet, bTree->root).first;
@@ -111,7 +109,7 @@ void OFswitch::CABtest_rt_TCAM() {
             } else
                 cout<<"null bucket" <<endl;
 
-            if (curT > simuT+offset)
+            if (curT > simuT)
                 break;
         }
     } catch (const io::gzip_error & e) {
@@ -155,7 +153,7 @@ void OFswitch::CEMtest_rt_id() {
             auto res = flow_rec.insert(flow_id);
             flow_table.ins_rec(flow_id, curT, res.second);
 
-            if (curT > simuT+offset)
+            if (curT > simuT)
                 break;
         }
     } catch (const io::gzip_error & e) {
@@ -192,7 +190,7 @@ void OFswitch::CDRtest_rt() {
 
         string str;
         while(getline(trace_stream, str)) {
-            addr_5tup packet(str, false);
+            addr_5tup packet(str);
             curT = packet.timestamp;
 
             for (uint32_t idx = 0; idx < rList->list.size(); idx++) { // linear search
@@ -203,7 +201,7 @@ void OFswitch::CDRtest_rt() {
                 }
             }
 
-            if (curT > simuT+offset)
+            if (curT > simuT)
                 break;
         }
     } catch (const io::gzip_error & e) {
@@ -234,14 +232,14 @@ void OFswitch::CMRtest_rt() {
 
         string str;
         while(getline(trace_stream, str)) {
-            addr_5tup packet(str, false);
+            addr_5tup packet(str);
             curT = packet.timestamp;
             auto res = flow_rec.insert(packet);
 
             r_rule mRule = rList->get_micro_rule(packet);
             cam_cache.ins_rec(mRule, curT, res.second);
             string str;
-            if (curT > simuT +offset)
+            if (curT > simuT)
                 break;
         }
     } catch (const io::gzip_error & e) {

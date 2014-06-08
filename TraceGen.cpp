@@ -822,13 +822,13 @@ void tracer::flow_pruneGen_mp_ev( unordered_set<addr_5tup> & flowInfo) const {
             uint32_t i = 0 ;
             for (i = 0; i < flow_thres && i < header_buf.size(); ++i) {
                 addr_5tup header;
-                /*if ((double) rand() /RAND_MAX < (1-cold_prob)) { // no noise
+                if ((double) rand() /RAND_MAX < (1-cold_prob)) { // no noise
                     auto q_iter = hotspot_queue.begin();
                     advance(q_iter, rand()%hotspot_no);
                     header = q_iter->gen_header();
                 } else {
-		*/
-                header = rList->list[(rand()%(rList->list.size()))].get_random();
+                    header = rList->list[(rand()%(rList->list.size()))].get_random();
+		}
                 pruned_map.insert( std::make_pair(header_buf[i], std::make_pair(id, header)));
                 ++id;
             }
