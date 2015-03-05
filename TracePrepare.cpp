@@ -35,13 +35,13 @@ int main() {
     // init log, rule list, randomness
     srand (time(NULL));
     logging_init();
-    string rulefile = "../para_src/rule4000";
+    string rulefile = "/home/bovenyan/CAB/classbench/rule1500";
     rule_list rList(rulefile, true);
     rList.print("../para_src/rList.dat");
     
     // generate bucket tree
-    bucket_tree bTree(rList, 15, true);
-    bTree.pre_alloc();
+    bucket_tree bTree(rList, 8, true);
+//    bTree.pre_alloc();
     bTree.print_tree("../para_src/tree_pr.dat");
 
     // trace generation

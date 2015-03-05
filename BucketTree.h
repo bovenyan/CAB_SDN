@@ -23,6 +23,7 @@ class bucket_tree {
     uint32_t thres_hard;
     uint32_t pa_rule_no;
     std::set<uint32_t> pa_rules;
+    int tree_depth;
 
     // for debug
     bool debug;
@@ -43,6 +44,7 @@ class bucket_tree {
     void check_static_hit(const b_rule &, bucket*, std::set<size_t> &, size_t &);
     void pre_alloc();
     void dyn_adjust();
+    void cal_tree_depth(bucket *, int = 0);
 
   private:
     // static related

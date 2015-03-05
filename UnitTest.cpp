@@ -70,11 +70,19 @@ int main() {
     // init log, rule list, randomness
     srand (time(NULL));
     logging_init();
-    string rulefile = "../para_src/rule4000";
+    string rulefile = "../para_src/ruleset/rule4000";
     rule_list rList(rulefile, true);
 
     // generate bucket tree
-    bucket_tree bTree(rList, 20, true);
+    bucket_tree bTree(rList, 20, false, 800);
+    bTree.tree_depth = 0;
+    bTree.cal_tree_depth(bTree.root);
+    cout << bTree.tree_depth << endl;
+    bTree.pre_alloc();
+    bTree.tree_depth = 0;
+    bTree.cal_tree_depth(bTree.root);
+    cout << bTree.tree_depth << endl;
+
     //bTree.print_tree("../para_src/tree.dat", false);
     //bTree.pre_alloc();
     //bTree.print_tree("../para_src/tree_pr.dat", false);
@@ -105,10 +113,12 @@ int main() {
     */
 
     // unit test: buck_tree generation and search
+    /*
     string str = "0.00%167772161%167772162%4000%8000%6";
     addr_5tup packet(str);
     auto res = bTree.search_bucket(packet, bTree.root);
     cout<<res.first->get_str()<<endl;
+    */
     
     // bTree.search_test("../Trace_Generate/trace-20k-0.01-10/GENtrace/ref_trace.gz");
 

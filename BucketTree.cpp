@@ -15,6 +15,7 @@ using std::ofstream;
 bucket_tree::bucket_tree() {
     root = NULL;
     thres_soft = 0;
+    tree_depth = 0;
 }
 
 bucket_tree::bucket_tree(rule_list & rL, uint32_t thr, bool test_bed, size_t pa_no ) {
@@ -29,6 +30,7 @@ bucket_tree::bucket_tree(rule_list & rL, uint32_t thr, bool test_bed, size_t pa_
     splitNode_fix(root);
 
     pa_rule_no = pa_no;
+    tree_depth = 0;
 }
 
 bucket_tree::~bucket_tree() {
@@ -233,6 +235,14 @@ void bucket_tree::delNode(bucket * ptr) {
         delNode(*iter);
     }
     delete ptr;
+}
+
+void bucket_tree::cal_tree_depth(bucket * ptr, int count){
+    for (Iter_son iter = ptr->sonList.begin(); iter != ptr->sonList.end(); iter++){
+    	cal_tree_depth(*iter, ++count);
+    }
+    if (count > tree_depth)
+	    tree_depth = count;
 }
 
 // dynamic related

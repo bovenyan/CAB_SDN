@@ -49,6 +49,7 @@ public:
     double cold_prob;
     uint32_t hotspot_no;
     double hotvtime;
+    string trace_root_dir; 	// the root directory to save all traces
 
 private:
     rule_list * rList;
@@ -69,7 +70,6 @@ private:
 
 
     // sources and gen
-    string trace_root_dir; 	// the root directory to save all traces
     string flowInfoFile_str;    // first arr time of each flow
     string pcap_dir;		// original pcap trace direcotry
     string parsed_pcap_dir;	// directory of parsed pcap file
@@ -110,6 +110,7 @@ public:
     vector<b_rule> gen_seed_hotspot(size_t, size_t);
     vector<b_rule> evolve_pattern(const vector<b_rule> &);
     void raw_snapshot(string, double, double);
+    void pcap_snapshot(size_t, double, pref_addr = pref_addr(), pref_addr = pref_addr());
     void raw_hp_similarity(string, double, double, double, size_t = 10);
 
     /* trace generation and evaluation

@@ -18,6 +18,7 @@ add_executable(UnitTest UnitTest.cpp)
 add_executable(TracePrepare TracePrepare.cpp)
 add_executable(TracePrepare_blk TracePrepare_blk.cpp)
 add_executable(TraceExam TraceExam.cpp)
+add_executable(TracePlot TracePlot.cpp)
 add_executable(CAB_Simu CAB_Simu.cpp)
 
 if(UNIX)
@@ -39,6 +40,14 @@ if(UNIX)
 		)
 	target_link_libraries(
 		TracePrepare_blk
+		cab
+		${Boost_LIBRARIES}
+		pthread
+		z
+		pcap
+		)
+	target_link_libraries(
+		TracePlot
 		cab
 		${Boost_LIBRARIES}
 		pthread

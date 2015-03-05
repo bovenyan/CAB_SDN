@@ -29,14 +29,20 @@ void logging_init() {
 int main() {
     srand (time(NULL));
     logging_init();
-    string rulefile = "../para_src/ruleset/acl_8000";
+    //string rulefile = "../para_src/ruleset/rule8000-sp";
+    string rulefile = "../para_src/ruleset/rule8000-rgg";
     rule_list rList(rulefile);
+    rList.obtain_dep();
     
-    fs::path dir("./Trace_Generate_blk/");
+    //fs::path dir("./Trace_Generate_blk/spec/");
+    fs::path dir("./Trace_Generate_blk/final/");
     vector<fs::path> pvec;
     std::copy(fs::directory_iterator(dir), fs::directory_iterator(), std::back_inserter(pvec));
     std::sort(pvec.begin(), pvec.end());
+    bucket_tree bTree(rList, 15, false, 400);
+    bTree.pre_alloc();
 
+    /*
     for (size_t i = 1; i<20; ++i){
 	cout << "percentage " << i*0.025 << endl;
     	bucket_tree bTree(rList, 15, false, i*100);
@@ -49,22 +55,23 @@ int main() {
     	ofswitch.tracefile_str = pvec[0].string() + "/GENtrace/ref_trace.gz";
     	cout << "Processing: "<< pvec[0].string()<<endl;
 	ofswitch.run_test();
-    }
+    }*/
 
+    OFswitch ofswitch;
+    ofswitch.set_para("../para_src/mode_file", &rList, &bTree);
 
-    
-    /*
     for (auto it = pvec.begin(); it != pvec.end(); ++it){
 	    ofswitch.tracefile_str = it->string() + "/GENtrace/ref_trace.gz";
+	    ofswitch.simuT = 600;
 	    cout << " Processing trace: " << it->string() << endl;
-	    cout << "CAB: processing" << endl;
-    	ofswitch.mode = 0;
+	    cout << "CDR: processing" << endl;
+    	    ofswitch.mode = 2;
 	    ofswitch.run_test();
-	    cout << "CMR: processing" << endl;
-    	ofswitch.mode = 3;
-	    ofswitch.run_test();
+	    //ofswitch.simuT = 200;
+	    //cout << "CMR: processing" << endl;
+    	    //ofswitch.mode = 3;
+	    //ofswitch.run_test();
     }
-    */
 
     return 0;
 }

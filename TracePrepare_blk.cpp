@@ -35,12 +35,12 @@ int main() {
     // init log, rule list, randomness
     srand (time(NULL));
     logging_init();
-    string rulefile = "../para_src/ruleset/acl_8000";
+    string rulefile = "../para_src/ruleset/rule8000-rgg";
     rule_list rList(rulefile);
-    rList.print("../para_src/rList.dat");
     
     // generate bucket tree
     bucket_tree bTree(rList, 15);
+    bTree.pre_alloc();
     bTree.print_tree("../para_src/tree_pr.dat");
 
     // trace generation
@@ -48,18 +48,15 @@ int main() {
     tGen.set_para("../para_src/para_file_blk.txt");
     tGen.hotspot_prob_b(false);
 
-    tGen.flow_rate = 250;
-    tGen.hotspot_no = 80;
-    tGen.hotvtime = 10;
-    tGen.pFlow_pruning_gen(false);
-    /*
-    for (int i = 1; i < 7; ++i){
-	tGen.flow_rate = 50*i;
-	tGen.hotspot_no = 50+5*i;
+    tGen.trace_root_dir = "./Trace_Generate_blk/final/";
+    
+    for (int i = 1; i < 20; ++i){
+	tGen.flow_rate = 10*i;
+	tGen.hotspot_no = 50+2*i;
+	tGen.cold_prob = 0.001+0.0001*i;
 	tGen.hotvtime = 20;
     	tGen.pFlow_pruning_gen(false);
     }
-    */
 
     //tGen.raw_snapshot("./Packet_File/sample-10-12", 10, 300);
     //tGen.raw_hp_similarity("./Packet_File/sample-10-12", 3600, 30, 120, 20);

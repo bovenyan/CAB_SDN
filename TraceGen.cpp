@@ -457,6 +457,106 @@ void tracer::raw_snapshot(string tracedir, double start_time, double interval) {
     }
 }
 
+void tracer::pcap_snapshot(size_t file_st, double interval, pref_addr src_subnet, pref_addr dst_subnet){
+    fs::path dir(pcap_dir);
+    jesusBorn = EpochT(-1,0);
+    
+    boost::unordered_map<pair<size_t, size_t>, size_t> hostpair_rec;
+    set<size_t> hosts;
+    bool stop = false;
+
+    if (fs::exists(dir) && fs::is_directory(dir)) {
+	Path_Vec_T pvec;
+	std::copy(fs::directory_iterator(dir), fs::directory_iterator(), std::back_inserter(pvec));
+	std::sort(pvec.begin(), pvec.end());
+
+	for (auto it = pvec.begin()+file_st; !stop && it != pvec.end(); ++it){
+		
+		struct pcap_pkthdr header; // The header that pcap gives us
+		const u_char *packet; // The actual packet
+    		pcap_t *handle;
+    		const struct sniff_ethernet * ethernet;
+    		const struct sniff_ip * ip;
+    		const struct sniff_tcp *tcp;
+    		uint32_t size_ip;
+    		uint32_t size_tcp;
+		char errbuf[PCAP_ERRBUF_SIZE];
+		
+		handle = pcap_open_offline(it->c_str(), errbuf);
+		
+		while (true) {
+            		packet = pcap_next(handle, &header);
+            		if (packet == NULL)
+                		break;
+			ethernet = (struct sniff_ethernet*)(packet);
+			
+			int ether_offset = 0;
+			if (ntohs(ethernet->ether_type) == ETHER_TYPE_IP) {
+				ether_offset = 14;
+			} else if (ntohs(ethernet->ether_type) == ETHER_TYPE_8021Q) {
+                		// here may have a bug
+                		ether_offset = 18;
+            		} else {
+                		continue;
+            		}
+			
+			ip = (struct sniff_ip*)(packet + ether_offset);
+			
+			size_ip = IP_HL(ip)*4;
+			if (IP_V(ip) != 4 || size_ip < 20)
+				continue;
+            		if (uint32_t(ip->ip_p) != 6)
+               		continue;
+
+            		tcp = (struct sniff_tcp*)(packet + ether_offset + size_ip);
+            		size_tcp = TH_OFF(tcp)*4;
+            		if (size_tcp < 20)
+                		continue;
+
+			if (jesusBorn < 0)
+				jesusBorn = EpochT(header.ts.tv_sec, header.ts.tv_usec);
+	
+			EpochT cur_ts(header.ts.tv_sec, header.ts.tv_usec);
+			if (cur_ts.toDouble(jesusBorn) > interval){
+				stop = true;
+				break;
+			}
+
+			uint32_t ip_src = ntohl(ip->ip_src.s_addr);
+			uint32_t ip_dst = ntohl(ip->ip_dst.s_addr);
+
+			if (!(src_subnet.hit(ip_src) && dst_subnet.hit(ip_dst)))
+				continue;
+			auto key = std::make_pair(ip_src, ip_dst);
+			auto res = hostpair_rec.insert(std::make_pair(key, 1));
+			hosts.insert(ip_src);
+			hosts.insert(ip_dst);
+			if (!res.second) 
+				++hostpair_rec[key];
+        	}
+		pcap_close(handle);
+		cout << "finished_processing : "<< it->c_str() << endl;
+	}
+    }
+
+    stringstream ss;
+    ss << "snapshot-"<<file_st<<".dat";
+    ofstream ff(ss.str());
+    ofstream ff1("hostpair");
+
+    for ( auto it = hosts.begin(); it != hosts.end(); ++it){
+    	ff1 << *it << endl;
+    }
+
+    for ( auto it = hostpair_rec.begin(); it != hostpair_rec.end(); ++it){
+	    int x_dist = std::distance(hosts.begin(), hosts.find(it->first.first));
+	    int y_dist = std::distance(hosts.begin(), hosts.find(it->first.second));
+	    ff<<x_dist<<"\t"<<y_dist<<"\t"<<it->second<<endl;
+    }
+
+    cout << "Finished Plotting.. " <<endl;
+
+}
 
 const uint32_t mask_C = ((~uint32_t(0)) << 4);
 struct hostpair{
