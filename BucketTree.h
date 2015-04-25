@@ -9,6 +9,7 @@
 #include <cmath>
 #include <set>
 #include <deque>
+#include <list>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/filesystem.hpp>
@@ -54,9 +55,11 @@ class bucket_tree {
     void INOpruning(bucket *);
     void delNode(bucket *);
 
+  public:
     // dynamic related
     void merge_bucket(bucket*);
-    void regi_occupancy(bucket*, std::deque <bucket*> &);
+    //void regi_occupancy(bucket*, std::deque <bucket*> &); // deprecated Apr. 24
+    void rec_occupancy(bucket*, std::list <bucket*> &);
     void repart_bucket();
 
     void print_bucket(std::ofstream &, bucket *, bool); // const

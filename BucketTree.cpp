@@ -7,7 +7,7 @@ namespace fs = boost::filesystem;
 namespace io = boost::iostreams;
 
 using std::set;
-using std::deque;
+using std::list;
 using std::ifstream;
 using std::ofstream;
 
@@ -239,7 +239,7 @@ void bucket_tree::delNode(bucket * ptr) {
 
 void bucket_tree::cal_tree_depth(bucket * ptr, int count){
     for (Iter_son iter = ptr->sonList.begin(); iter != ptr->sonList.end(); iter++){
-    	cal_tree_depth(*iter, ++count);
+    	cal_tree_depth(*iter, count+1);
     }
     if (count > tree_depth)
 	    tree_depth = count;
@@ -273,7 +273,7 @@ void bucket_tree::merge_bucket(bucket * ptr) { // merge using back order search
     ptr->sonList.clear();
     ptr->hit = true;
 }
-
+/*
 void bucket_tree::regi_occupancy(bucket * ptr, deque <bucket *>  & hitBucks) {
     if (ptr->sonList.empty() && ptr->hit) {
         ptr->hit = false;  // clear the hit flag
@@ -284,18 +284,34 @@ void bucket_tree::regi_occupancy(bucket * ptr, deque <bucket *>  & hitBucks) {
     }
     for (auto iter = ptr->sonList.begin(); iter != ptr->sonList.end(); ++iter)
         regi_occupancy(*iter, hitBucks);
+}*/
+
+void bucket_tree::rec_occupancy(bucket * ptr, list<bucket *> & hitBucks){
+    if (ptr->sonList.empty() && ptr->hit) {
+        ptr->hit = false; // clear the hit flag
+        hitBucks.push_back(ptr);
+        for (auto iter = ptr->related_rules.begin(); iter != ptr->related_rules.end(); ++iter){
+            ++rList->occupancy[*iter];
+        }
+    }
+    for (auto iter = ptr->sonList.begin(); iter != ptr->sonList.end(); ++iter)
+        rec_occupancy(*iter, hitBucks);
 }
 
 void bucket_tree::repart_bucket() {
-    deque<bucket *> proc_line;
-    regi_occupancy(root, proc_line);
+    // deque<bucket *> proc_line;  // Apr.25 updated
+    list<bucket *> proc_line; 
+    rec_occupancy(root, proc_line);
 
     size_t suc_counter = 0;
     auto proc_iter = proc_line.begin();
 
     while (!proc_line.empty()) {
         while(true) {
-            if (proc_iter == proc_line.end())
+            if (suc_counter == proc_line.size())
+                return;
+
+            if (proc_iter == proc_line.end())   // cycle
                 proc_iter = proc_line.begin();
 
             bool found = false;
@@ -312,11 +328,9 @@ void bucket_tree::repart_bucket() {
                 break;
             else {
                 ++proc_iter;
-                ++suc_counter;
+                ++suc_counter; // suc_counter;
             }
 
-            if (suc_counter == proc_line.size())
-                return;
         }
 
         bucket* to_proc_bucket = *proc_iter;
@@ -335,6 +349,7 @@ void bucket_tree::repart_bucket() {
         if (opt_cut.empty()) {
             to_proc_bucket->cleanson();
             ++proc_iter; // keep the bucket
+            ++suc_counter;
         } else {
             //BOOST_LOG(bTree_log) << "success";
             proc_iter = proc_line.erase(proc_iter); // delete the bucket
@@ -344,8 +359,8 @@ void bucket_tree::repart_bucket() {
             for (size_t i = 0; i < 4; ++i)
                 to_proc_bucket->cutArr[i] = opt_cut[i];
 
-            for (auto iter = to_proc_bucket->sonList.begin(); // push son for immediate processing
-                    iter != to_proc_bucket->sonList.end();
+            for (auto iter = to_proc_bucket->sonList.begin(); // push son
+                    iter != to_proc_bucket->sonList.end(); // immediate proc
                     ++iter) {
                 bool son_hit = false;
                 for(auto r_iter = (*iter)->related_rules.begin(); r_iter != (*iter)->related_rules.end(); ++r_iter) {
@@ -356,8 +371,7 @@ void bucket_tree::repart_bucket() {
                 }
 
                 if (son_hit) {
-                    proc_line.insert(proc_iter, *iter);
-                    --proc_iter;
+                    proc_iter = proc_line.insert(proc_iter, *iter);
                 }
             }
         }
@@ -479,8 +493,8 @@ void bucket_tree::static_traf_test(const string & file_str) {
     }
 
 
-    deque<bucket *> proc_line;
-    regi_occupancy(root, proc_line);
+    list<bucket *> proc_line;
+    rec_occupancy(root, proc_line);
 
     size_t unused_count = 0;
     stringstream ss;

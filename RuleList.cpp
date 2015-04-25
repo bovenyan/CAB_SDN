@@ -25,14 +25,12 @@ rule_list::rule_list(string & filename, bool test_bed) {
     occupancy = vector<size_t>(list.size(), 0);
     file.close();
 
-    if (test_bed) { // remove rule with same hostpair
-        for(auto iter = list.begin(); iter != list.end(); ++iter) {
-            for (auto iter_cp = iter+1; iter_cp != list.end(); ) {
-                if (*iter == *iter_cp) 
-                    iter_cp = list.erase(iter_cp);
-		else
-			++iter_cp;
-            }
+    for(auto iter = list.begin(); iter != list.end(); ++iter) {
+        for (auto iter_cp = iter+1; iter_cp != list.end(); ) {
+            if (*iter == *iter_cp) 
+                iter_cp = list.erase(iter_cp);
+	else
+		++iter_cp;
         }
     }
 }
