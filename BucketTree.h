@@ -58,9 +58,11 @@ class bucket_tree {
   public:
     // dynamic related
     void merge_bucket(bucket*);
+    void merge_bucket_CPLX_test(bucket*);
     //void regi_occupancy(bucket*, std::deque <bucket*> &); // deprecated Apr. 24
     void rec_occupancy(bucket*, std::list <bucket*> &);
     void repart_bucket();
+    void repart_bucket_CPLX_test(int);
 
     void print_bucket(std::ofstream &, bucket *, bool); // const
 

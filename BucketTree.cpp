@@ -273,6 +273,37 @@ void bucket_tree::merge_bucket(bucket * ptr) { // merge using back order search
     ptr->sonList.clear();
     ptr->hit = true;
 }
+
+void bucket_tree::merge_bucket_CPLX_test(bucket * ptr) { // merge using back order search
+    if (!ptr->sonList.empty()) {
+        for (auto iter = ptr->sonList.begin(); iter!= ptr->sonList.end(); ++iter) {
+            merge_bucket_CPLX_test(*iter);
+        }
+    } else
+        return;
+/********   Junan: added to limit merge  *********/
+    if (ptr->related_rules.size() >= thres_soft*2)
+        return;
+
+    bool at_least_one_hit = false;
+
+    for (auto iter = ptr->sonList.begin(); iter != ptr->sonList.end(); ++iter) {  // don't merge if all empty
+        if ((*iter)->hit)
+            at_least_one_hit = true;
+        else {
+            if (!(*iter)->related_rules.empty())
+                return;
+        }
+    }
+
+    if (!at_least_one_hit)
+        return;
+
+    for (auto iter = ptr->sonList.begin(); iter != ptr->sonList.end(); ++iter) // remove the sons.
+        delete *iter;
+    ptr->sonList.clear();
+    ptr->hit = true;
+}
 /*
 void bucket_tree::regi_occupancy(bucket * ptr, deque <bucket *>  & hitBucks) {
     if (ptr->sonList.empty() && ptr->hit) {
@@ -289,6 +320,7 @@ void bucket_tree::regi_occupancy(bucket * ptr, deque <bucket *>  & hitBucks) {
 void bucket_tree::rec_occupancy(bucket * ptr, list<bucket *> & hitBucks){
     if (ptr->sonList.empty() && ptr->hit) {
         ptr->hit = false; // clear the hit flag
+        ptr->repart_level = 0;
         hitBucks.push_back(ptr);
         for (auto iter = ptr->related_rules.begin(); iter != ptr->related_rules.end(); ++iter){
             ++rList->occupancy[*iter];
@@ -371,6 +403,109 @@ void bucket_tree::repart_bucket() {
                 }
 
                 if (son_hit) {
+                    proc_iter = proc_line.insert(proc_iter, *iter);
+                }
+            }
+        }
+    }
+}
+
+void bucket_tree::repart_bucket_CPLX_test(int level) {
+    // deque<bucket *> proc_line;  // Apr.25 updated
+    list<bucket *> proc_line; 
+    rec_occupancy(root, proc_line);
+
+    size_t suc_counter = 0;
+    auto proc_iter = proc_line.begin();
+
+    while (!proc_line.empty()) {
+        while(true) {
+            if (suc_counter == proc_line.size())
+                return;
+
+            if (proc_iter == proc_line.end())   // cycle
+                proc_iter = proc_line.begin();
+
+            bool found = false;
+            for (auto rule_iter = (*proc_iter)->related_rules.begin();
+                    rule_iter != (*proc_iter)->related_rules.end();
+                    ++rule_iter) {
+                if (rList->occupancy[*rule_iter] == 1) {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (found)
+                break;
+            else {
+                ++proc_iter;
+                ++suc_counter; // suc_counter;
+            }
+
+        }
+
+        bucket* to_proc_bucket = *proc_iter;
+
+/*******    Junan: check depth to limit maximum split   *********/
+        if ( (to_proc_bucket->repart_level >= level) &&
+             (to_proc_bucket->related_rules.size() < thres_hard) ){
+            proc_iter = proc_line.erase(proc_iter); // delete the bucket
+            suc_counter = 0;
+            continue;
+        }
+
+        vector<size_t> opt_cut;
+        int opt_gain = -1; // totally greedy: no gain don't partition
+
+        for (auto iter = candi_split.begin(); iter != candi_split.end(); ++iter) {
+            int gain = to_proc_bucket->reSplit(*iter, rList);
+            if (gain > opt_gain) {
+                opt_gain = gain;
+                opt_cut = *iter;
+            }
+        }
+/*******    Junan: force to cut     **********/
+        size_t cut[4] = {1,1,0,0};
+        for (size_t i = 0; i < 4; i++)
+            opt_cut[i] = cut[i];
+
+        if (opt_cut.empty()) {
+            to_proc_bucket->cleanson();
+            ++proc_iter; // keep the bucket
+            ++suc_counter;
+        } else {
+            //BOOST_LOG(bTree_log) << "success";
+            proc_iter = proc_line.erase(proc_iter); // delete the bucket
+            suc_counter = 0;
+            to_proc_bucket->reSplit(opt_cut, rList, true);
+
+            for (size_t i = 0; i < 4; ++i)
+                to_proc_bucket->cutArr[i] = opt_cut[i];
+
+            for (auto iter = to_proc_bucket->sonList.begin(); // push son
+                    iter != to_proc_bucket->sonList.end(); // immediate proc
+                    ++iter) {
+/*******    Junan: record repart levels to limit repartition    *******/
+                (*iter)->repart_level = to_proc_bucket->repart_level + 1;
+
+                bool son_hit = false;
+                for(auto r_iter = (*iter)->related_rules.begin(); r_iter != (*iter)->related_rules.end(); ++r_iter) {
+                    if (rList->list[*r_iter].hit) {
+                        son_hit = true;
+                        break;
+                    }
+                }
+/*******    Junan: if son bucket contain rules then add to proc_line    *******/
+                if (!(*iter)->related_rules.empty())
+                    son_hit = true;
+
+                if (son_hit) {
+/*******    Junan: didn't increase occupancy in reSplit(). so do it here    *******/
+                    for (auto iter_id = (*iter)->related_rules.begin();
+                            iter_id != (*iter)->related_rules.end(); ++iter_id) {
+                        ++rList->occupancy[*iter_id];
+                    }
                     proc_iter = proc_line.insert(proc_iter, *iter);
                 }
             }
