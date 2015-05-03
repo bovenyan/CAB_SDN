@@ -5,6 +5,8 @@
 #include "Address.hpp"
 #include <boost/functional/hash.hpp>
 
+class b_rule;
+
 class p_rule {
   public:
     pref_addr hostpair[2];
@@ -25,6 +27,7 @@ class p_rule {
     inline addr_5tup get_random() const;
 
     inline std::pair<p_rule, bool> join_rule(p_rule) const;
+    inline b_rule cast_to_bRule() const; // May 02
 
     inline std::string get_str() const;
     inline void print() const;
@@ -180,6 +183,16 @@ inline pair<p_rule, bool> p_rule::join_rule(p_rule pr) const { // use this rule 
     if (!portpair[1].truncate(pr.portpair[1]))
         return std::make_pair(p_rule(), false);
     return std::make_pair(pr, true);
+}
+
+inline b_rule p_rule::cast_to_bRule() const {
+    b_rule br;
+    br.addrs[0] = hostpair[0];
+    br.addrs[1] = hostpair[1];
+    br.addrs[2] = portpair[0].approx(true);
+    br.addrs[3] = portpair[1].approx(true);
+
+    return br;
 }
 
 inline addr_5tup p_rule::get_corner() const { // generate the corner as did by ClassBench
