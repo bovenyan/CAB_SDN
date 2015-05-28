@@ -728,7 +728,7 @@ void tracer::pFlow_pruning_gen(bool evolving) {
         for (string str; getline(infile, str);) {
             addr_5tup packet(str);
             if (packet.timestamp > simuT)
-                break;
+                continue;
             flowInfo.insert(packet);
         }
         infile.close();

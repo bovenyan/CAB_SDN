@@ -169,6 +169,7 @@ class range_addr {
     inline bool match (const pref_addr &) const;
     inline bool hit (const uint32_t &) const;
     inline void getTighter(const uint32_t &, const range_addr &);  // Mar 14
+    inline pref_addr approx(bool is_port) const; // May 02
     inline friend std::vector<range_addr> minus_rav(std::vector<range_addr> &, std::vector<range_addr> &);
 
     inline uint32_t get_extreme(bool) const;
@@ -595,6 +596,48 @@ inline void range_addr::getTighter(const uint32_t & hit, const range_addr & ra) 
     if (ra.range[1] >= hit && ra.range[1] < range[1]) {
         range[1] = ra.range[1];
     }
+}
+
+inline pref_addr range_addr::approx(bool is_port = true) const{
+    if ((range[1] == ~0) && (range[0] == 0)){
+        pref_addr p_addr ("0.0.0.0/0");
+        return p_addr;
+    }
+    int length = range[1] - range[0] + 1;
+    int app_len = 1;
+
+    while (length/2 > 0){
+        app_len = app_len * 2;
+        length = length/2;
+    }
+
+    pref_addr p_addr; 
+    int mid = range[1] - range[1] % app_len;
+    if ( mid + app_len - 1 <= range[1] ){
+        p_addr.pref = mid;
+    }
+    else{
+        if (mid - app_len >= range[0])
+            p_addr.pref = mid - app_len;
+        else{
+            app_len = app_len/2;
+            if (mid + app_len - 1 <= range[1])
+                p_addr.pref = mid;
+            else 
+                p_addr.pref = mid - app_len/2;
+        }
+    }
+
+    p_addr.mask = ~0;
+    while (app_len > 1){
+        p_addr.mask = p_addr.mask << 1;
+        app_len = app_len/2;
+    }
+
+    if (is_port) // port only has the last 16 bits.
+        p_addr.mask = p_addr.mask | ((~0)<<16);
+    p_addr.pref = p_addr.pref & p_addr.mask;
+    return p_addr;
 }
 
 inline vector<range_addr> minus_rav(vector<range_addr> & lhs, vector<range_addr> & rhs) { // minus the upper rules
