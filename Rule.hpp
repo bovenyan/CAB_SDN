@@ -70,6 +70,8 @@ class r_rule {
     inline bool overlap(const r_rule &) const;
     inline void prune_mic_rule(const r_rule &, const addr_5tup &); // Mar 14
 
+    inline b_rule cast_to_bRule() const;
+
     inline std::string get_str() const;
 };
 
@@ -399,6 +401,17 @@ inline void r_rule::prune_mic_rule(const r_rule & rr, const addr_5tup & pack) { 
     for (uint32_t i =0; i< 4; ++i) {
         addrs[i].getTighter(pack.addrs[i], rr.addrs[i]);
     }
+}
+
+
+inline b_rule r_rule::cast_to_bRule() const {
+    b_rule br;
+    br.addrs[0] = addrs[0].approx(false);
+    br.addrs[1] = addrs[1].approx(false);
+    br.addrs[2] = addrs[2].approx(true);
+    br.addrs[3] = addrs[3].approx(true);
+
+    return br;
 }
 
 /* print and debug
