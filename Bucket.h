@@ -19,6 +19,7 @@ class bucket: public b_rule {
     bool hit;
     bucket * parent;
     size_t max_gain;
+    size_t repart_level;
 
   public:
     bucket();

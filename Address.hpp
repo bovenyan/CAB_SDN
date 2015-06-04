@@ -599,6 +599,10 @@ inline void range_addr::getTighter(const uint32_t & hit, const range_addr & ra) 
 }
 
 inline pref_addr range_addr::approx(bool is_port = true) const{
+    if ((range[1] == ~0) && (range[0] == 0)){
+        pref_addr p_addr ("0.0.0.0/0");
+        return p_addr;
+    }
     int length = range[1] - range[0] + 1;
     int app_len = 1;
 
@@ -625,13 +629,13 @@ inline pref_addr range_addr::approx(bool is_port = true) const{
     }
 
     p_addr.mask = ~0;
-    while (app_len != 0){
+    while (app_len > 1){
         p_addr.mask = p_addr.mask << 1;
         app_len = app_len/2;
     }
 
     if (is_port) // port only has the last 16 bits.
-        p_addr.mask = p_addr.mask & ((~0)<<16);
+        p_addr.mask = p_addr.mask | ((~0)<<16);
     p_addr.pref = p_addr.pref & p_addr.mask;
     return p_addr;
 }
