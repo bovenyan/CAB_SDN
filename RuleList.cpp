@@ -78,6 +78,28 @@ int rule_list::linear_search(const addr_5tup & packet) {
     return -1;
 }
 
+void rule_list::createDAG(){
+    depDag = depDAG(list.size());
+
+    for (int i = 1; i < list.size(); ++i){
+        vector<r_rule> residual;
+        residual.push_back(r_rule(list[i]));
+        for (int j = i-1; i >= 0; --i){
+            if (range_minus(residual, list[i])){
+                boost::add_edge(i, j, depDag); 
+            }
+        }
+    }
+}
+
+void rule_list::obtain_cover() {
+   vertex_iterator iter, end;
+   for (tie(iter, end) = vertices(depDag); iter != end; ++iter){
+       for (){
+       }
+   }
+}
+
 void rule_list::clearHitFlag() {
     for (size_t idx = 0; idx != list.size(); ++idx) {
         occupancy[idx] = 0;
@@ -111,7 +133,3 @@ void rule_list::rule_dep_analysis() {
         ff<<endl;
     }
 }
-
-
-
-

@@ -64,11 +64,13 @@ class r_rule {
     inline r_rule(const r_rule &);
     inline r_rule(const p_rule &);
 
-    inline bool operator==(const r_rule &) const ;
+    inline bool operator==(const r_rule &) const;
     inline friend uint32_t hash_value(r_rule const &);
+    vector<r_rule> minus(const r_rule &);  // Dec. 15  TODO to validate 
 
     inline bool overlap(const r_rule &) const;
     inline void prune_mic_rule(const r_rule &, const addr_5tup &); // Mar 14
+    inline friend bool range_minus(vector<r_rule> &, const r_rule &); // Dec. 15 TODO to validate
 
     inline b_rule cast_to_bRule() const;
 
@@ -249,8 +251,8 @@ inline string p_rule::get_str() const {
  * 	(const string &)	generate from a string "srcpref/mask \t dstpref/mask \t ..."
  */
 inline b_rule::b_rule() { // constructor default
-    addrs[2].mask = ((~0)<<16); // port is limited to 0~65535
-    addrs[3].mask = ((~0)<<16);
+    addrs[2].mask = ((~(unsigned)0)<<16); // port is limited to 0~65535
+    addrs[3].mask = ((~(unsigned)0)<<16);
 }
 
 inline b_rule::b_rule(const b_rule & br) { // copy constructor
@@ -386,6 +388,28 @@ inline uint32_t hash_value(r_rule const & rr) { // hash the detailed range value
     return seed;
 }
 
+vector<r_rule> r_rule::minus(const r_rule & mRule){
+    vector<r_rule> result;
+
+    vector<vector<range_addr> > field_div;
+    
+    for (int i = 0; i < 4; ++i){
+        field_div.push_back(minus_range(addrs[i], mRule.addrs[i]));
+    }
+
+    for (int i = 0; i < 4; ++i){
+        for (range_addr radd : field_div[i]){
+            r_rule res = mRule;
+            res.addrs[i] = radd;
+            for (int j = i+1; j < 4; ++j){
+                res.addrs[j] = addrs[j];
+            }
+            result.push_back(res);
+        }
+    }
+    return result;
+}
+
 /* member functions
  */
 inline bool r_rule::overlap (const r_rule & rr) const { // check whether another r_rule overlap with it.
@@ -412,6 +436,24 @@ inline b_rule r_rule::cast_to_bRule() const {
     br.addrs[3] = addrs[3].approx(true);
 
     return br;
+}
+
+inline bool range_minus(vector<r_rule> & toMinusRules, const r_rule & mRule){
+    bool overlap = false;
+    for (auto iter = toMinusRules.begin(); iter != toMinusRules.end(); ){
+        if (iter->overlap(mRule)){
+            auto result = iter->minus(mRule);
+            iter = toMinusRules.erase(iter);
+            for (auto & mR : result)
+                iter = toMinusRules.insert(iter, mR);
+            iter += result.size();
+            overlap = true;
+        }
+        else{
+            ++iter;
+        }
+    }
+    return overlap;
 }
 
 /* print and debug
@@ -452,10 +494,10 @@ inline h_rule::h_rule(const addr_5tup & center, uint32_t (& scope)[4]) {
     for (uint32_t i = 2; i < 4; i++) {
         if (scope[i] < 16) {
             addrs[i].pref = (center.addrs[i] & ((~0)<<scope[i]));
-            addrs[i].mask = ((~0)<<scope[i]);
+            addrs[i].mask = ((~unsigned(0))<<scope[i]);
         } else {
             addrs[i].pref = 0;
-            addrs[i].mask = ((~0)<<16);
+            addrs[i].mask = ((~unsigned(0))<<16);
         }
     }
 }

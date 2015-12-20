@@ -4,7 +4,7 @@ project(CAB_SDN)
 set(CMAKE_CXX_COMPILER /usr/bin/g++)
 set(CMAKE_CXX_FLAGS "-std=c++11 -g")
 
-find_package(Boost 1.55.0 REQUIRED COMPONENTS system thread filesystem iostreams log log_setup)
+find_package(Boost 1.54.0 REQUIRED COMPONENTS system thread filesystem iostreams log log_setup)
 if(Boost_FOUND)
 	message(STATUS "Boost found")
 	message(STATUS "BOOST_LIBRARIES: " ${Boost_LIBRARIES})

@@ -3,110 +3,111 @@
 
 #include "stdafx.h"
 #include <boost/functional/hash.hpp>
+using std::vector;
+
 class range_addr;
 
-class EpochT{
-	long int sec;
-	long int msec;
+class EpochT {
+    long int sec;
+    long int msec;
 
-	public:
-	inline EpochT():sec(0),msec(0){}
+public:
+    inline EpochT():sec(0),msec(0) {}
 
-	inline EpochT(int isec, int imsec):sec(isec),msec(imsec){}
+    inline EpochT(int isec, int imsec):sec(isec),msec(imsec) {}
 
-	inline EpochT(const std::string & str){
-		std::vector<std::string> temp;
-		boost::split(temp, str, boost::is_any_of("%"));
-		sec = boost::lexical_cast<uint32_t> (temp[0]);
-		msec = boost::lexical_cast<uint32_t> (temp[1]);
-	}
+    inline EpochT(const std::string & str) {
+        std::vector<std::string> temp;
+        boost::split(temp, str, boost::is_any_of("%"));
+        sec = boost::lexical_cast<uint32_t> (temp[0]);
+        msec = boost::lexical_cast<uint32_t> (temp[1]);
+    }
 
-	inline EpochT(const double & dtime){
-		sec = int(dtime);
-		msec = int((dtime-sec)*1000000);
-	}
+    inline EpochT(const double & dtime) {
+        sec = int(dtime);
+        msec = int((dtime-sec)*1000000);
+    }
 
-	inline EpochT(const int & itime){
-		sec = int(itime);
-		msec = 0;
-	}
+    inline EpochT(const int & itime) {
+        sec = int(itime);
+        msec = 0;
+    }
 
-	inline EpochT(const EpochT & rhs){
-		sec = rhs.sec;
-		msec = rhs.msec;
-	}
+    inline EpochT(const EpochT & rhs) {
+        sec = rhs.sec;
+        msec = rhs.msec;
+    }
 
-	/*
-	inline EpochT& operator=(const EpochT & rhs){
-		sec = rhs.sec;
-		msec = rhs.msec;
-		return *this;
-	}*/
+    /*
+    inline EpochT& operator=(const EpochT & rhs){
+    	sec = rhs.sec;
+    	msec = rhs.msec;
+    	return *this;
+    }*/
 
-	inline EpochT operator+(const double & dtime) const{
-		long sec = this->sec + int(dtime);
-		long msec = this->msec + int((dtime-int(dtime))*1000000);
-		if (msec > 1000000){
-			msec -= 1000000;
-			sec += 1;
-		}
-		EpochT res(sec, msec);
-		return res;
-	}
+    inline EpochT operator+(const double & dtime) const {
+        long sec = this->sec + int(dtime);
+        long msec = this->msec + int((dtime-int(dtime))*1000000);
+        if (msec > 1000000) {
+            msec -= 1000000;
+            sec += 1;
+        }
+        EpochT res(sec, msec);
+        return res;
+    }
 
-	inline EpochT operator+(const int & rhs) const{
-		EpochT res(this->sec+rhs, this->msec);
-		return res;
-	}
+    inline EpochT operator+(const int & rhs) const {
+        EpochT res(this->sec+rhs, this->msec);
+        return res;
+    }
 
-	inline EpochT operator+(const EpochT & rhs) const{
-		long sec = this->sec+rhs.sec;
-		long msec = this->msec+rhs.sec;
-		if (msec > 1000000){
-			msec -= 1000000;
-			sec += 1;
-		}
-		EpochT res(sec, msec);
-		return res;
-	}
+    inline EpochT operator+(const EpochT & rhs) const {
+        long sec = this->sec+rhs.sec;
+        long msec = this->msec+rhs.sec;
+        if (msec > 1000000) {
+            msec -= 1000000;
+            sec += 1;
+        }
+        EpochT res(sec, msec);
+        return res;
+    }
 
-	inline EpochT operator-(const EpochT & rhs) const{
-		long sec = this->sec-rhs.sec;
-		long msec = this->msec-rhs.sec;
-		if (msec < 0){
-			msec += 1000000;
-			sec -= 1;
-		}
-		EpochT res(sec, msec);
-		return res;
-	}
+    inline EpochT operator-(const EpochT & rhs) const {
+        long sec = this->sec-rhs.sec;
+        long msec = this->msec-rhs.sec;
+        if (msec < 0) {
+            msec += 1000000;
+            sec -= 1;
+        }
+        EpochT res(sec, msec);
+        return res;
+    }
 
-	bool operator<(const EpochT & rhs) const{
-		if (this->sec < rhs.sec){
-			return true;
-		}
-		else if(this->sec == rhs.sec){
-			if (this->msec < rhs.sec)
-				return true;
-		}
-		return false;
-	}
+    bool operator<(const EpochT & rhs) const {
+        if (this->sec < rhs.sec) {
+            return true;
+        } else if(this->sec == rhs.sec) {
+            if (this->msec < rhs.sec)
+                return true;
+        }
+        return false;
+    }
 
-	double toDouble(const EpochT & offset) const{
-		double res = this->sec - offset.sec;
-		res += double(this->msec - offset.msec)/1000000;
-		return res;
-	}
+    double toDouble(const EpochT & offset) const {
+        double res = this->sec - offset.sec;
+        res += double(this->msec - offset.msec)/1000000;
+        return res;
+    }
 
 };
 
 class addr_5tup {
-  public:
+public:
     uint32_t addrs[4];
     bool proto;
     double timestamp;
 
-  public:
+public:
     inline addr_5tup();
     inline addr_5tup(const addr_5tup &);
     inline addr_5tup(const std::string &); // processing gen
@@ -123,15 +124,15 @@ class addr_5tup {
 
 
 class pref_addr {
-  public:
+public:
     uint32_t pref;
     uint32_t mask;
 
-  public:
+public:
     inline pref_addr();
     inline pref_addr(const pref_addr &);
     inline pref_addr(const std::string &);
-    
+
     inline bool operator==(const pref_addr &) const;
 
     inline bool match (const pref_addr &) const;
@@ -149,10 +150,10 @@ class pref_addr {
 
 
 class range_addr {
-  public:
+public:
     uint32_t range[2];
 
-  public:
+public:
     inline range_addr();
     inline range_addr(const range_addr &);
     inline range_addr(const std::string &);
@@ -170,6 +171,7 @@ class range_addr {
     inline bool hit (const uint32_t &) const;
     inline void getTighter(const uint32_t &, const range_addr &);  // Mar 14
     inline pref_addr approx(bool is_port) const; // May 02
+    inline friend std::vector<range_addr> minus_range(const range_addr &, const range_addr &); // Dec 14
     inline friend std::vector<range_addr> minus_rav(std::vector<range_addr> &, std::vector<range_addr> &);
 
     inline uint32_t get_extreme(bool) const;
@@ -201,7 +203,7 @@ inline addr_5tup::addr_5tup(const addr_5tup & ad) {
     timestamp = ad.timestamp;
 }
 
-inline addr_5tup::addr_5tup(const string & str){
+inline addr_5tup::addr_5tup(const string & str) {
     vector<string> temp;
     boost::split(temp, str, boost::is_any_of("%"));
     proto = true;
@@ -212,7 +214,7 @@ inline addr_5tup::addr_5tup(const string & str){
     addrs[3] = boost::lexical_cast<uint32_t>(temp[4]);
 }
 
-inline addr_5tup::addr_5tup(const string & str, const EpochT & offset){
+inline addr_5tup::addr_5tup(const string & str, const EpochT & offset) {
     vector<string> temp;
     boost::split(temp, str, boost::is_any_of("%"));
     proto = true;
@@ -370,12 +372,12 @@ inline pref_addr::pref_addr(const pref_addr & pa) {
     mask = pa.mask;
 }
 
-inline bool pref_addr::operator==(const pref_addr & rhs) const{
-	if (pref != rhs.pref)
-		return false;
-	if (mask != rhs.mask)
-		return false;
-	return true;
+inline bool pref_addr::operator==(const pref_addr & rhs) const {
+    if (pref != rhs.pref)
+        return false;
+    if (mask != rhs.mask)
+        return false;
+    return true;
 }
 
 inline bool pref_addr::hit(const uint32_t & ad) const {
@@ -435,24 +437,24 @@ inline bool pref_addr::truncate(range_addr & rule) const {
 
 inline void pref_addr::mutate(uint32_t s_shrink, uint32_t s_expand, bool port) {
     if (rand()%2 > 0) { // expand
-	if (s_expand == 0)
-		s_expand = 1;
-    	uint32_t mdig = rand() % (s_expand+1);
+        if (s_expand == 0)
+            s_expand = 1;
+        uint32_t mdig = rand() % (s_expand+1);
         for (uint32_t i = 0; i < mdig; ++i) {
-            if ((mask == 0 && !port) || (mask == ((~0) << 16) && port))
+            if ((mask == 0 && !port) || (mask == ((~unsigned(0)) << 16) && port))
                 break;
             mask = mask << mdig;
         }
-	pref = pref & mask;
+        pref = pref & mask;
     } else { // shrink
-	if (s_shrink == 0)
-		s_shrink = 1;
-    	uint32_t mdig = rand() % (s_shrink+1);
+        if (s_shrink == 0)
+            s_shrink = 1;
+        uint32_t mdig = rand() % (s_shrink+1);
         for (uint32_t i = 0; i < mdig; ++i) {
             if (~mask == 0)
                 break;
-	    uint32_t new_mask = (mask >> 1) + (1 << 31);
-	    pref += (rand()%2 * (new_mask - mask));
+            uint32_t new_mask = (mask >> 1) + (1 << 31);
+            pref += (rand()%2 * (new_mask - mask));
             mask = new_mask;
         }
         pref = pref & mask;
@@ -598,44 +600,43 @@ inline void range_addr::getTighter(const uint32_t & hit, const range_addr & ra) 
     }
 }
 
-inline pref_addr range_addr::approx(bool is_port = true) const{
-    if ((range[1] == ~0) && (range[0] == 0)){
+inline pref_addr range_addr::approx(bool is_port = true) const {
+    if ((range[1] == ~0) && (range[0] == 0)) {
         pref_addr p_addr ("0.0.0.0/0");
         return p_addr;
     }
     int length = range[1] - range[0] + 1;
     int app_len = 1;
 
-    while (length/2 > 0){
+    while (length/2 > 0) {
         app_len = app_len * 2;
         length = length/2;
     }
 
-    pref_addr p_addr; 
+    pref_addr p_addr;
     int mid = range[1] - range[1] % app_len;
-    if ( mid + app_len - 1 <= range[1] ){
+    if ( mid + app_len - 1 <= range[1] ) {
         p_addr.pref = mid;
-    }
-    else{
+    } else {
         if (mid - app_len >= range[0])
             p_addr.pref = mid - app_len;
-        else{
+        else {
             app_len = app_len/2;
             if (mid + app_len - 1 <= range[1])
                 p_addr.pref = mid;
-            else 
+            else
                 p_addr.pref = mid - app_len/2;
         }
     }
 
     p_addr.mask = ~0;
-    while (app_len > 1){
+    while (app_len > 1) {
         p_addr.mask = p_addr.mask << 1;
         app_len = app_len/2;
     }
 
     if (is_port) // port only has the last 16 bits.
-        p_addr.mask = p_addr.mask | ((~0)<<16);
+        p_addr.mask = p_addr.mask | ((~unsigned(0))<<16);
     p_addr.pref = p_addr.pref & p_addr.mask;
     return p_addr;
 }
@@ -667,6 +668,26 @@ inline vector<range_addr> minus_rav(vector<range_addr> & lhs, vector<range_addr>
         iter_l++;
     }
     return res;
+}
+
+inline vector<range_addr> minus_range(const range_addr & lhs, const range_addr & rhs) {
+    if (rhs.range[0] <= lhs.range[0]) {
+        if (rhs.range[1] < lhs.range[0])
+            return vector<range_addr>(1,lhs);
+        if (rhs.range[1] < lhs.range[1])
+            return vector<range_addr>(1, range_addr(rhs.range[1]+1, lhs.range[1]));
+        return vector<range_addr>();
+    }
+    if (rhs.range[0] <= lhs.range[1]) {
+        if (rhs.range[1] >= lhs.range[1])
+            return vector<range_addr>(1, range_addr(lhs.range[0], rhs.range[0] - 1));
+
+        vector<range_addr> result;
+        result.push_back(range_addr(lhs.range[0], rhs.range[0]-1));
+        result.push_back(range_addr(rhs.range[1]+1, lhs.range[1]));
+        return result;
+    }
+    return vector<range_addr>(1,lhs);
 }
 
 inline uint32_t range_addr::get_extreme(bool hi) const { // get the higher or lower range of the addr
