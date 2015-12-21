@@ -86,16 +86,19 @@ void rule_list::createDAG(){
         residual.push_back(r_rule(list[i]));
         for (int j = i-1; i >= 0; --i){
             if (range_minus(residual, list[i])){
-                boost::add_edge(i, j, depDag); 
+                boost::add_edge(j, i, depDag); 
             }
         }
     }
 }
 
 void rule_list::obtain_cover() {
-   vertex_iterator iter, end;
-   for (tie(iter, end) = vertices(depDag); iter != end; ++iter){
-       for (){
+   vertex_iterator iter, end, adj_iter, adj_end;
+   for (tie(iter, end) = vertices(depDag); iter != end; ++iter){ 
+       cover_map[*iter] = vector<uint32_t>();
+       for (tie(adj_iter, adj_end) = adjacent_vertices(*iter, depDag); 
+               adj_iter != adj_end; ++adj_iter){
+           cover_map[*iter].push_back(*adj_iter);
        }
    }
 }
@@ -128,7 +131,6 @@ void rule_list::rule_dep_analysis() {
             auto result = list[idx].join_rule(list[idx1]);
             if (result.second)
                 ff << result.first.get_str()<<endl;
-
         }
         ff<<endl;
     }

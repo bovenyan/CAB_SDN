@@ -12,8 +12,8 @@ class p_rule {
     pref_addr hostpair[2];
     range_addr portpair[2];
     bool proto;
-
     bool hit;
+    int weight;
 
   public:
     inline p_rule();
