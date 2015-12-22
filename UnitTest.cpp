@@ -5,6 +5,7 @@
 #include "BucketTree.h"
 #include "TraceGen.h"
 #include "OFswitch.h"
+#include "CacheFlow.hpp"
 
 using std::cout;
 using std::endl;
