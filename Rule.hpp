@@ -66,7 +66,7 @@ class r_rule {
 
     inline bool operator==(const r_rule &) const;
     inline friend uint32_t hash_value(r_rule const &);
-    vector<r_rule> minus(const r_rule &);  // Dec. 15  TODO to validate 
+    inline vector<r_rule> minus(const r_rule &);  // Dec. 15  TODO to validate, 20161027 jiaren added "inline"
 
     inline bool overlap(const r_rule &) const;
     inline void prune_mic_rule(const r_rule &, const addr_5tup &); // Mar 14
@@ -388,7 +388,8 @@ inline uint32_t hash_value(r_rule const & rr) { // hash the detailed range value
     return seed;
 }
 
-vector<r_rule> r_rule::minus(const r_rule & mRule){
+//jiaren inline
+inline vector<r_rule> r_rule::minus(const r_rule & mRule){
     vector<r_rule> result;
 
     vector<vector<range_addr> > field_div;
