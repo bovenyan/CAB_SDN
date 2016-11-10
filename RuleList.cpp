@@ -3,6 +3,7 @@
 using std::ifstream;
 using std::ofstream;
 using std::string;
+using std::tie;// jiaren:missing the namespace
 
 /* constructor
  *
@@ -96,9 +97,16 @@ void rule_list::obtain_cover() {
    vertex_iterator iter, end, adj_iter, adj_end;
    for (tie(iter, end) = vertices(depDag); iter != end; ++iter){ 
        cover_map[*iter] = vector<uint32_t>();
+       /*
        for (tie(adj_iter, adj_end) = adjacent_vertices(*iter, depDag); 
                adj_iter != adj_end; ++adj_iter){
            cover_map[*iter].push_back(*adj_iter);
+       }
+       */
+       /* jiaren */
+       for (pair<adjacency_iterator, adjacency_iterator> pairAdj = adjacent_vertices(*iter, depDag);
+            pairAdj.first != pairAdj.second; ++pairAdj.first){
+           cover_map[*iter].push_back(*pairAdj.first);
        }
    }
 }

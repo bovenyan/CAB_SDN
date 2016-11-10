@@ -7,6 +7,7 @@
 #include <unordered_map>
 
 #include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/adjacency_iterator.hpp>
 
 
 class rule_list {
@@ -31,6 +32,7 @@ private:
     typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS> depDAG;
     typedef boost::graph_traits<depDAG>::vertex_descriptor vertex_descriptor;
     typedef boost::graph_traits<depDAG>::vertex_iterator vertex_iterator;
+    typedef boost::graph_traits<depDAG>::adjacency_iterator adjacency_iterator;//jiaren
     depDAG depDag;
 
 public:
