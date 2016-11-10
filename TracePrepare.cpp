@@ -15,6 +15,7 @@ namespace sinks = boost::log::sinks;
 namespace keywords = boost::log::keywords;
 namespace fs = boost::filesystem;
 
+/* initalize log  */
 void logging_init() {
     fs::create_directory("./log");
     logging::add_file_log
@@ -25,26 +26,30 @@ void logging_init() {
         keywords::format = "[%TimeStamp%]: %Message%"
     );
 
-    /*logging::core::get()->set_filter
-    (
-        logging::trivial::severity >= warning
-    );*/
+    /* set severity  */
+    /* logging::core::get()->set_filter
+     * (
+     *     logging::trivial::severity >= warning
+     * ); */
 }
 
 int main() {
-    // init log, rule list, randomness
     srand (time(NULL));
     logging_init();
+
+    // TODO: argument parser
     string rulefile = "/home/bovenyan/CAB/classbench/rule1500";
+    
+    /* apply true for testbed, 2 tuple rule */
     rule_list rList(rulefile, true);
-    rList.print("../para_src/rList.dat");
+    // rList.print("../para_src/rList.dat");
     
     // generate bucket tree
     bucket_tree bTree(rList, 8, true);
-//    bTree.pre_alloc();
+    // bTree.pre_alloc();
     bTree.print_tree("../para_src/tree_pr.dat");
 
-    // trace generation
+    /* trace generation */
     tracer tGen(&rList);
     tGen.set_para("../para_src/para_file.txt");
     tGen.hotspot_prob_b(false);

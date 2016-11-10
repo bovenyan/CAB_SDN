@@ -742,6 +742,7 @@ void tracer::pFlow_pruning_gen(bool evolving) {
     stringstream ss;
     ss<<dir.string()<<"/trace-"<<flow_rate<<"k-"<<cold_prob<<"-"<<hotspot_no;
     gen_trace_dir = ss.str();
+
     if (evolving)
 	    flow_pruneGen_mp_ev(flowInfo);
     else

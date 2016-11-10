@@ -17,7 +17,7 @@ public:
     std::vector<size_t> occupancy;
 
     rule_list();
-    rule_list(std::string &, bool = false);
+    rule_list(std::string & filename, bool test_bed = false);
 
     // for dependency set
     void obtain_dep();

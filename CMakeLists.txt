@@ -15,30 +15,30 @@ add_definitions(-DBOOST_LOG_DYN_LINK)
 set(CAB Bucket.cpp BucketTree.cpp MicRuleTree.cpp RuleList.cpp OFswitch.cpp BucketTree.cpp TraceAnalyze.cpp TraceGen.cpp)
 add_library(cab ${CAB})
 #add_executable(UnitTest UnitTest.cpp)
-#add_executable(TracePrepare TracePrepare.cpp)
+add_executable(TracePrepare TracePrepare.cpp)
 #add_executable(TracePrepare_blk TracePrepare_blk.cpp)
 #add_executable(TraceExam TraceExam.cpp)
 #add_executable(CAB_Simu CAB_Simu.cpp)
-add_executable(TraceForEval TraceForEval.cpp)
-add_executable(CPLX_test CPLX_test.cpp)
+# add_executable(TraceForEval TraceForEval.cpp)
+# add_executable(CPLX_test CPLX_test.cpp)
 
 if(UNIX)
-	target_link_libraries(
-		TraceForEval
-		cab
-		${Boost_LIBRARIES}
-		pthread
-		z
-		pcap
-		)
-	target_link_libraries(
-		CPLX_test
-		cab
-		${Boost_LIBRARIES}
-		pthread
-		z
-		pcap
-		)
+	# target_link_libraries(
+		# TraceForEval
+		# cab
+		# ${Boost_LIBRARIES}
+		# pthread
+		# z
+		# pcap
+		# )
+	# target_link_libraries(
+		# CPLX_test
+		# cab
+		# ${Boost_LIBRARIES}
+		# pthread
+		# z
+		# pcap
+		# )
 #	target_link_libraries(
 #		UnitTest
 #		cab
@@ -47,14 +47,14 @@ if(UNIX)
 #		z
 #		pcap
 #		)
-#	target_link_libraries(
-#		TracePrepare
-#		cab
-#		${Boost_LIBRARIES}
-#		pthread
-#		z
-#		pcap
-#		)
+    target_link_libraries(
+        TracePrepare
+        cab
+        ${Boost_LIBRARIES}
+        pthread
+        z
+        pcap
+        )
 #	target_link_libraries(
 #		TracePrepare_blk
 #		cab
