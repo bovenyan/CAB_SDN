@@ -6,7 +6,7 @@
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/filesystem.hpp>
 #include <pcap.h>
-#include "header_def.h"
+#include "PcapHeader.hpp"
 #include "Address.hpp"
 using namespace std;
 

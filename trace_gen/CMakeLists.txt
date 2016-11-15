@@ -14,6 +14,7 @@ add_definitions(-DBOOST_LOG_DYN_LINK)
 
 add_executable(TracePrepare_blk TracePrepare_blk.cpp TraceGen.cpp)
 add_executable(TracePrepare TracePrepare.cpp TraceGen.cpp)
+add_executable(FlowGen FlowGen.cpp)
 
 if(UNIX)
     target_link_libraries(
@@ -32,6 +33,14 @@ if(UNIX)
         z
         pcap
         )
+    target_link_libraries(
+        FlowGen
+        cab
+        pcap
+        rt
+        ${Boost_LIBRARIES}
+        )
+
 elseif(WIN32)
 elseif(APPLE)
 endif(UNIX)
