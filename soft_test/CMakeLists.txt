@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8) 
-project(CAB_LIB)
+project(CAB_TRACEGEN)
 
 set(CMAKE_CXX_COMPILER /usr/bin/g++)
 set(CMAKE_CXX_FLAGS "-std=c++11 -g")
@@ -12,8 +12,25 @@ endif()
 
 add_definitions(-DBOOST_LOG_DYN_LINK)
 
-set(CAB Bucket.cpp MicRuleTree.cpp RuleList.cpp BucketTree.cpp)
-add_library(cab ${CAB})
+add_executable(CAB_Simu CAB_Simu.cpp OFswitch.cpp)
+add_executable(CPLX_test CPLX_test.cpp)
+
+if(UNIX)
+    target_link_libraries(
+        CPLX_test
+        cab
+        ${Boost_LIBRARIES}
+        z
+        )
+    target_link_libraries(
+        CAB_Simu
+        cab
+        ${Boost_LIBRARIES}
+        z
+        )
+elseif(WIN32)
+elseif(APPLE)
+endif(UNIX)
 
 message(STATUS "c++ flag : " ${CMAKE_CXX_FLAGS}) 
 message(STATUS "this is source dir " ${project_source_dir})
