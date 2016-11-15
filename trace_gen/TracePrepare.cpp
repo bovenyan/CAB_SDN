@@ -15,6 +15,7 @@ namespace sinks = boost::log::sinks;
 namespace keywords = boost::log::keywords;
 namespace fs = boost::filesystem;
 
+/* initalize log  */
 void logging_init() {
     fs::create_directory("./log");
     logging::add_file_log
@@ -25,32 +26,37 @@ void logging_init() {
         keywords::format = "[%TimeStamp%]: %Message%"
     );
 
-    /*logging::core::get()->set_filter
-    (
-        logging::trivial::severity >= warning
-    );*/
+    /* set severity  */
+    /* logging::core::get()->set_filter
+     * (
+     *     logging::trivial::severity >= warning
+     * ); */
 }
 
 int main() {
-    // init log, rule list, randomness
     srand (time(NULL));
     logging_init();
-    string rulefile = "../para_src/ruleset/8k_4";
-    rule_list rList(rulefile, false);
-    rList.print("../para_src/rList.dat");
+
+    // TODO: argument parser
+    string rulefile = "../para_src/ruleset/acl_8000";
+    
+    /* apply true for testbed, 2 tuple rule */
+    rule_list rList(rulefile, true);
+   
+    // rList.print("../para_src/rList.dat");
     
     // generate bucket tree
-    bucket_tree bTree(rList, 20, false);
-//    bTree.pre_alloc();
+    bucket_tree bTree(rList, 8, true);
+    // bTree.pre_alloc();
     bTree.print_tree("../para_src/tree_pr.dat");
 
-    // trace generation
+    /* trace generation */
     tracer tGen(&rList);
-    tGen.set_para("../para_src/trace_para.txt");
+    tGen.set_para("../para_src/para_file.txt");
     tGen.hotspot_prob_b(false);
-    for (int fr = 5; fr <= 50; fr += 5){
-        tGen.flow_rate = fr;
-        tGen.pFlow_pruning_gen(false);
-    }
+    tGen.pFlow_pruning_gen(false);
 
+    //tGen.raw_snapshot("./Packet_File/sample-10-12", 10, 300);
+    //tGen.raw_hp_similarity("./Packet_File/sample-10-12", 3600, 30, 120, 20);
+    //tGen.parse_pcap_file_mp(557,594);
 }
