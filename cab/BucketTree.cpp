@@ -17,8 +17,8 @@ bucket_tree::bucket_tree() {
     thres_soft = 0;
     tree_depth = 0;
 }
-
-bucket_tree::bucket_tree(rule_list & rL, uint32_t thr, bool test_bed, size_t pa_no ) {
+//jiaren20161117: test_bed -> bIs2tup
+bucket_tree::bucket_tree(rule_list & rL, uint32_t thr, bool bIs2tup, size_t pa_no ) {
     thres_hard = thr;
     thres_soft = thr*2;
     rList = &rL;
@@ -26,7 +26,7 @@ bucket_tree::bucket_tree(rule_list & rL, uint32_t thr, bool test_bed, size_t pa_
     for (uint32_t i = 0; i < rL.list.size(); i++)
         root->related_rules.insert(root->related_rules.end(), i);
 
-    gen_candi_split(test_bed);
+    gen_candi_split(bIs2tup);
     splitNode_fix(root);
 
     pa_rule_no = pa_no;
@@ -107,20 +107,20 @@ void bucket_tree::check_static_hit(const b_rule & traf_block, bucket* buck, set<
 }
 
 
-void bucket_tree::gen_candi_split(bool test_bed, size_t cut_no) {
-    if (test_bed) {
-	vector<size_t> base(4,0);
-	for (size_t i = 0; i <= cut_no; ++i){
-	    base[0] = i;
-	    base[1] = cut_no - i;
-	    candi_split.push_back(base);
-	}
+void bucket_tree::gen_candi_split(bool bIs2tup, size_t cut_no) {
+    if (bIs2tup) {
+        vector<size_t> base(4,0);
+        for (size_t i = 0; i <= cut_no; ++i) {
+            base[0] = i;
+            base[1] = cut_no - i;
+            candi_split.push_back(base);
+        }
     } else {
         if (cut_no == 0) {
             vector<size_t> base(4,0);
             candi_split.push_back(base);
         } else {
-            gen_candi_split(test_bed, cut_no-1);
+            gen_candi_split(bIs2tup, cut_no-1);
             vector< vector<size_t> > new_candi_split;
             if (cut_no > 1)
                 new_candi_split = candi_split;
@@ -237,12 +237,12 @@ void bucket_tree::delNode(bucket * ptr) {
     delete ptr;
 }
 
-void bucket_tree::cal_tree_depth(bucket * ptr, int count){
-    for (Iter_son iter = ptr->sonList.begin(); iter != ptr->sonList.end(); iter++){
-    	cal_tree_depth(*iter, count+1);
+void bucket_tree::cal_tree_depth(bucket * ptr, int count) {
+    for (Iter_son iter = ptr->sonList.begin(); iter != ptr->sonList.end(); iter++) {
+        cal_tree_depth(*iter, count+1);
     }
     if (count > tree_depth)
-	    tree_depth = count;
+        tree_depth = count;
 }
 
 // dynamic related
@@ -281,7 +281,7 @@ void bucket_tree::merge_bucket_CPLX_test(bucket * ptr) { // merge using back ord
         }
     } else
         return;
-/********   Junan: added to limit merge  *********/
+    /********   Junan: added to limit merge  *********/
     if (ptr->related_rules.size() >= thres_soft*2)
         return;
 
@@ -317,12 +317,12 @@ void bucket_tree::regi_occupancy(bucket * ptr, deque <bucket *>  & hitBucks) {
         regi_occupancy(*iter, hitBucks);
 }*/
 
-void bucket_tree::rec_occupancy(bucket * ptr, list<bucket *> & hitBucks){
+void bucket_tree::rec_occupancy(bucket * ptr, list<bucket *> & hitBucks) {
     if (ptr->sonList.empty() && ptr->hit) {
         ptr->hit = false; // clear the hit flag
         ptr->repart_level = 0;
         hitBucks.push_back(ptr);
-        for (auto iter = ptr->related_rules.begin(); iter != ptr->related_rules.end(); ++iter){
+        for (auto iter = ptr->related_rules.begin(); iter != ptr->related_rules.end(); ++iter) {
             ++rList->occupancy[*iter];
         }
     }
@@ -332,7 +332,7 @@ void bucket_tree::rec_occupancy(bucket * ptr, list<bucket *> & hitBucks){
 
 void bucket_tree::repart_bucket() {
     // deque<bucket *> proc_line;  // Apr.25 updated
-    list<bucket *> proc_line; 
+    list<bucket *> proc_line;
     rec_occupancy(root, proc_line);
 
     size_t suc_counter = 0;
@@ -412,7 +412,7 @@ void bucket_tree::repart_bucket() {
 
 void bucket_tree::repart_bucket_CPLX_test(int level) {
     // deque<bucket *> proc_line;  // Apr.25 updated
-    list<bucket *> proc_line; 
+    list<bucket *> proc_line;
     rec_occupancy(root, proc_line);
 
     size_t suc_counter = 0;
@@ -447,9 +447,9 @@ void bucket_tree::repart_bucket_CPLX_test(int level) {
 
         bucket* to_proc_bucket = *proc_iter;
 
-/*******    Junan: check depth to limit maximum split   *********/
+        /*******    Junan: check depth to limit maximum split   *********/
         if ( (to_proc_bucket->repart_level >= level) &&
-             (to_proc_bucket->related_rules.size() < thres_hard) ){
+                (to_proc_bucket->related_rules.size() < thres_hard) ) {
             proc_iter = proc_line.erase(proc_iter); // delete the bucket
             suc_counter = 0;
             continue;
@@ -465,7 +465,7 @@ void bucket_tree::repart_bucket_CPLX_test(int level) {
                 opt_cut = *iter;
             }
         }
-/*******    Junan: force to cut     **********/
+        /*******    Junan: force to cut     **********/
         size_t cut[4] = {1,1,0,0};
         for (size_t i = 0; i < 4; i++)
             opt_cut[i] = cut[i];
@@ -486,7 +486,7 @@ void bucket_tree::repart_bucket_CPLX_test(int level) {
             for (auto iter = to_proc_bucket->sonList.begin(); // push son
                     iter != to_proc_bucket->sonList.end(); // immediate proc
                     ++iter) {
-/*******    Junan: record repart levels to limit repartition    *******/
+                /*******    Junan: record repart levels to limit repartition    *******/
                 (*iter)->repart_level = to_proc_bucket->repart_level + 1;
 
                 bool son_hit = false;
@@ -496,12 +496,12 @@ void bucket_tree::repart_bucket_CPLX_test(int level) {
                         break;
                     }
                 }
-/*******    Junan: if son bucket contain rules then add to proc_line    *******/
+                /*******    Junan: if son bucket contain rules then add to proc_line    *******/
                 if (!(*iter)->related_rules.empty())
                     son_hit = true;
 
                 if (son_hit) {
-/*******    Junan: didn't increase occupancy in reSplit(). so do it here    *******/
+                    /*******    Junan: didn't increase occupancy in reSplit(). so do it here    *******/
                     for (auto iter_id = (*iter)->related_rules.begin();
                             iter_id != (*iter)->related_rules.end(); ++iter_id) {
                         ++rList->occupancy[*iter_id];

@@ -1,5 +1,3 @@
-#include "stdafx.h"
-#include "Address.hpp"
 #include "Rule.hpp"
 #include "RuleList.h"
 #include "BucketTree.h"
@@ -26,16 +24,40 @@ void logging_init() {
     );
 }
 
-int main() {
+void print_usage() {
+    std::cerr << "Usage: CAB_Simu <CAB_Simu_config.ini> [rules_file] [blk_file] [mode_file]"
+              << std::endl;
+}
+
+int main(int argc, char* argv[]) {
+    if (argc < 2){
+        print_usage();
+        return 1;
+    }
+
+    //jiaren20161116
+    std::string rulesFileName;
+    std::string blkFileName;
+    std::string modeFileName;
+
+    std::ifstream iniFile(argv[1]);
+    std::string strLine;
+    std::vector<string> vector_parameters;
+
+    std::getline(iniFile, strLine);
+    boost::split(vector_parameters, strLine, boost::is_any_of(" \t"));
+    rulesFileName = vector_parameters[0];
+    blkFileName = vector_parameters[1];
+    modeFileName = vector_parameters[2];
+
+
     srand (time(NULL));
     logging_init();
-    //string rulefile = "../para_src/ruleset/rule8000-sp";
-    string rulefile = "../para_src/ruleset/rule8000-rgg";
-    rule_list rList(rulefile);
+    rule_list rList(rulesFileName);
     rList.obtain_dep();
     
     //fs::path dir("./Trace_Generate_blk/spec/");
-    fs::path dir("./Trace_Generate_blk/final/");
+    fs::path dir(blkFileName);
     vector<fs::path> pvec;
     std::copy(fs::directory_iterator(dir), fs::directory_iterator(), std::back_inserter(pvec));
     std::sort(pvec.begin(), pvec.end());
@@ -58,7 +80,7 @@ int main() {
     }*/
 
     OFswitch ofswitch;
-    ofswitch.set_para("../para_src/mode_file", &rList, &bTree);
+    ofswitch.set_para(modeFileName, &rList, &bTree);
 
     for (auto it = pvec.begin(); it != pvec.end(); ++it){
 	    ofswitch.tracefile_str = it->string() + "/GENtrace/ref_trace.gz";

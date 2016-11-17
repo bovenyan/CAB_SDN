@@ -14,6 +14,7 @@
 #include <boost/asio.hpp>
 #include <boost/log/trivial.hpp>
 #include <utility>
+#include <vector>
 #include "Message.hpp"
 #include "TimeSpec.hpp"
 #include "BucketTree.h"
@@ -51,6 +52,7 @@ public:
             msg.append_uint(bkt->addrs[3].mask);
             msg.append_uint(0);
 
+
             auto & rule_ids = bkt->related_rules;
             auto & rule_list = bTree_.rList->list;
 
@@ -67,6 +69,7 @@ public:
                 msg.append_uint(approx_bkt.addrs[3].pref);
                 msg.append_uint(approx_bkt.addrs[3].mask);
                 msg.append_uint(id);
+                approx_bkt.print(); // jiaren20161116: Debug information for adding rules from controller to switch
             }
 
         }
@@ -241,31 +244,64 @@ void collector(Adapter & adp, std::ostream & os) {
     }
 }
 
-void print_usage() {
-    std::cerr << "Usage: CABDeamon <rules_file> [port] [stat_file]\n"
+v{oid print_usage() {
+    std::cerr << "Usage: CABDeamon <CABDaemon_config.ini> [rules_file] [port] [stat_file]\n"
               << "port          [default: 9000]\n"
               << "stat_file     [default: control.stat]"
               << std::endl;
 }
 int main(int argc, char* argv[]) {
-    if (argc < 1) {
+    if (argc < 2) {
         print_usage();
         return 1;
     }
 
-    std::ofstream st_out;
+    std::string rulesFileName;
     int ctrl_port;
+    std::string statFileName;
 
-    if (argc < 2) {
-        ctrl_port = 9000;
-    } else {
-        ctrl_port = atoi(argv[2]);
-        if (argc < 3) {
-            st_out.open("control.stat");
-        } else {
-            st_out.open(argv[3]);
+    std::ofstream st_out;
+
+    /* read initial configuration from .ini */
+    std::ifstream iniFile(argv[1]);
+    std::string strLine;
+    std::vector<string> vector_parameters;
+    int iThresholdHard;
+    bool bIs2tup;
+
+    for (; std::getline(iniFile, strLine); ) {
+        vector_parameters = std::vector<string>();
+        boost::split(vector_parameters, strLine, boost::is_any_of(" \t"));
+        if ("rules_file" == vector_parameters[0]) {
+            rulesFileName = vector_parameters[1];
+        }
+        if ("port" == vector_parameters[0]) {
+            ctrl_port = std::stoi(vector_parameters[1]);
+        }
+        if ("stat_file" == vector_parameters[0]) {
+            statFileName = vector_parameters[1];
+        }
+        if ("threshold_hard" == vector_parameters[0]) {
+            iThresholdHard = std::stoi(vector_parameters[1]);
+        }
+        if ("2tup_or_4tup" == vector_parameters[0]) {
+            if ("true" == vector_parameters[1]) bIs2tup = true;
+            else bIs2tup = false;
         }
     }
+
+    if (argc > 2) {
+        rulesFileName = std::string(argv[2]);
+    }
+    if (argc > 3) {
+        ctrl_port = atoi(argv[3]);
+    }
+    if (argc > 4) {
+        statFileName = std::string(argv[4]);
+    }
+
+    st_out.open(statFileName);
+
 
     if (!st_out.is_open()) {
         std::cerr << "Can not open statistic file." << endl;
@@ -275,14 +311,13 @@ int main(int argc, char* argv[]) {
     boost_log_init();
 
     /* parse rule file  */
-    std::string rulefile(argv[1]);
-    rule_list rList(rulefile,false);
+    rule_list rList(rulesFileName, bIs2tup);
 
     BOOST_LOG_TRIVIAL(debug) << "Loading rules : "
                              << rList.list.size() << std::endl;
 
     /* Bucket Tree initialization and preloaing */
-    bucket_tree bTree(rList, 20, false);
+    bucket_tree bTree(rList, iThresholdHard, bIs2tup);
     bTree.pre_alloc();
 
     Adapter adapter(bTree);
@@ -297,9 +332,8 @@ int main(int argc, char* argv[]) {
 
         /* CABDaemon is the TCP server */
         chat_server server(io_service, endpoint , adapter);
-        io_service.run();
         BOOST_LOG_TRIVIAL(info) << "Deamon running..." << endl;
-
+        io_service.run();
     } catch (std::exception& e) {
         BOOST_LOG_TRIVIAL(fatal) << "Exception: " << e.what() << "\n";
     }
