@@ -33,28 +33,86 @@ void logging_init() {
      * ); */
 }
 
-int main() {
+void print_usage() {
+    std::cerr << "Usage: CABDeamon <CABDaemon_config.ini> [rules_file] [tree_preallocate_data] [para_file]"
+              << std::endl;
+}
+
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        print_usage();
+        return 1;
+    }
+
     srand (time(NULL));
     logging_init();
 
-    // TODO: argument parser
-    string rulefile = "../para_src/ruleset/acl_8000";
-    
+    std::string rulesFileName;
+    std::string treePreallocateFileName;
+    std::string paraFileName;
+    bool bIs2tup;
+    int iTresholdHard;
+    bool bIs_hotspot_prob_b_mutation;
+    bool bIs_pFlow_pruning_gen_evolving;
+
+    std::ifstream iniFile(argv[1]);
+    std::string strLine;
+    std::vector<string> vector_parameters;
+
+    for (; std::getline(iniFile, strLine); ) {
+        vector_parameters = std::vector<string>();
+        boost::split(vector_parameters, strLine, boost::is_any_of(" \t"));
+        if ("rules_file" == vector_parameters[0]) {
+            rulesFileName = vector_parameters[1];
+        }
+        if ("tree_preallocate_data" == vector_parameters[0]) {
+            treePreallocateFileName = vector_parameters[1];
+        }
+        if ("para_file" == vector_parameters[0]) {
+            paraFileName = vector_parameters[1];
+        }
+        if ("threshold_hard" == vector_parameters[0]) {
+            iThresholdHard = std::stoi(vector_parameters[1]);
+        }
+        if ("2tup_or_4tup" == vector_parameters[0]) {
+            if ("true" == vector_parameters[1]) bIs2tup = true;
+            else bIs2tup = false;
+        }
+        if ("hotspot_prob_b_mutation" == vector_parameters[0]) {
+            if ("true" == vector_parameters[1]) bIs_hotspot_prob_b_mutation = true;
+            else bIs_hotspot_prob_b_mutation = false;
+        }
+        if ("pFlow_pruning_gen_evolving" == vector_parameters[0]) {
+            if ("true" == vector_parameters[1]) bIs_pFlow_pruning_gen_evolving = true;
+            else bIs_pFlow_pruning_gen_evolving = false;
+        }
+    }
+
+    if (argc > 2) {
+        rulesFileName = std::string(argv[2]);
+    }
+    if (argc > 3) {
+        treePreallocateFileName = std::string(argv[3]);
+    }
+    if (argc > 4) {
+        paraFileName = std::string(argv[4]);
+    }
+
     /* apply true for testbed, 2 tuple rule */
-    rule_list rList(rulefile, true);
-   
+    rule_list rList(rulesFileName, bIs2tup);
+
     // rList.print("../para_src/rList.dat");
-    
+
     // generate bucket tree
-    bucket_tree bTree(rList, 8, true);
+    bucket_tree bTree(rList, iTresholdHard, bIs2tup);
     // bTree.pre_alloc();
-    bTree.print_tree("../para_src/tree_pr.dat");
+    bTree.print_tree(treePreallocateFileName);
 
     /* trace generation */
     tracer tGen(&rList);
-    tGen.set_para("../para_src/para_file.txt");
-    tGen.hotspot_prob_b(false);
-    tGen.pFlow_pruning_gen(false);
+    tGen.set_para(paraFileName);
+    tGen.hotspot_prob_b(bIs_hotspot_prob_b_mutation);
+    tGen.pFlow_pruning_gen(bIs_pFlow_pruning_gen_evolving);
 
     //tGen.raw_snapshot("./Packet_File/sample-10-12", 10, 300);
     //tGen.raw_hp_similarity("./Packet_File/sample-10-12", 3600, 30, 120, 20);
