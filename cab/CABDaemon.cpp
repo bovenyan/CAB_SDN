@@ -244,7 +244,7 @@ void collector(Adapter & adp, std::ostream & os) {
     }
 }
 
-v{oid print_usage() {
+void print_usage() {
     std::cerr << "Usage: CABDeamon <CABDaemon_config.ini> [rules_file] [port] [stat_file]\n"
               << "port          [default: 9000]\n"
               << "stat_file     [default: control.stat]"
@@ -259,6 +259,8 @@ int main(int argc, char* argv[]) {
     std::string rulesFileName;
     int ctrl_port;
     std::string statFileName;
+    int iThresholdHard;
+    bool bIs2tup;
 
     std::ofstream st_out;
 
@@ -266,8 +268,6 @@ int main(int argc, char* argv[]) {
     std::ifstream iniFile(argv[1]);
     std::string strLine;
     std::vector<string> vector_parameters;
-    int iThresholdHard;
-    bool bIs2tup;
 
     for (; std::getline(iniFile, strLine); ) {
         vector_parameters = std::vector<string>();
