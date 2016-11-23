@@ -40,11 +40,11 @@ namespace io = boost::iostreams;
 int make_pkt(const addr_5tup & header, uint8_t ** data, uint32_t * pkt_len) {
 
     uint32_t payload_size = sizeof(timespec);
-    uint32_t buffer_size = sizeof(sniff_ethernet) + sizeof(sniff_ip) + 
+    uint32_t buffer_size = sizeof(sniff_ethernet) + sizeof(sniff_ip) +
                            sizeof(sniff_tcp) + payload_size;
     uint8_t * buffer = new uint8_t[buffer_size];
 
-    memset(buffer,0,buffer_size);
+    memset(buffer, 0, buffer_size);
 
     sniff_ethernet * eth = (sniff_ethernet *)buffer;
     sniff_ip * ip = (sniff_ip *)(buffer+sizeof(sniff_ethernet));
@@ -53,26 +53,27 @@ int make_pkt(const addr_5tup & header, uint8_t ** data, uint32_t * pkt_len) {
     uint8_t * body = buffer + sizeof(sniff_ethernet) +
                      sizeof(sniff_ip) + sizeof(sniff_tcp);
 
-    /* map TCP port into mac for wildcard testing */
-    *eth = sniff_ethernet();
-    uint32_t src_port = htonl(header.addrs[2]);
-    uint32_t dst_port = htonl(header.addrs[3]);
-    memcpy(eth->ether_shost + 2, &src_port, 4);
-    memcpy(eth->ether_dhost + 2, &dst_port, 4);
-
-    /* IP source  */
-    *ip = sniff_ip();
-    *tcp = sniff_tcp();
-    ip->ip_src.s_addr = htonl(header.addrs[0]);
-    ip->ip_dst.s_addr = htonl(header.addrs[1]);
-    ip->ip_len = htonl(buffer_size - sizeof(sniff_ethernet));
-
-    /* make time stamp */
-    timespec * timestamp = (timespec *)body;
-    clock_gettime(CLOCK_REALTIME,timestamp);
-
-    *data = buffer;
-    *pkt_len = buffer_size;
+    /* IPv4 4 tuple mapping -> TCP port to MAC  */
+    /*     [> map TCP port into mac for wildcard testing <]
+     *     *eth = sniff_ethernet();
+     *     uint32_t src_port = htonl(header.addrs[2]);
+     *     uint32_t dst_port = htonl(header.addrs[3]);
+     *     memcpy(eth->ether_shost + 2, &src_port, 4);
+     *     memcpy(eth->ether_dhost + 2, &dst_port, 4);
+     *
+     *     [> IP source  <]
+     *     *ip = sniff_ip();
+     *     *tcp = sniff_tcp();
+     *     ip->ip_src.s_addr = htonl(header.addrs[0]);
+     *     ip->ip_dst.s_addr = htonl(header.addrs[1]);
+     *     ip->ip_len = htonl(buffer_size - sizeof(sniff_ethernet));
+     *
+     *     [> make time stamp <]
+     *     timespec * timestamp = (timespec *)body;
+     *     clock_gettime(CLOCK_REALTIME,timestamp);
+     *
+     *     *data = buffer;
+     *     *pkt_len = buffer_size; */
 
     return 0;
 }

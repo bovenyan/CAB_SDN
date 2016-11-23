@@ -42,7 +42,11 @@ flags = [
     '/usr/lib',
     '-isystem',
     '/usr/include',
+    '-isystem',
+    './cab',
+    '-isystem',
     '/usr/local/include',
+    '-isystem',
     '/usr/local/lib'
 ]
 

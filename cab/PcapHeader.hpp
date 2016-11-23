@@ -1,6 +1,7 @@
 #pragma once
 #include <sys/types.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 #define ETHER_ADDR_LEN	6
 
 /* Ethernet header */
@@ -13,7 +14,7 @@ struct sniff_ethernet {
 };
 const int SIZE_ETHERNET = sizeof(sniff_ethernet);
 
-/* IP header */
+/* IPv4 header */
 struct sniff_ip {
     sniff_ip()
         :ip_vhl(0x45),
@@ -43,6 +44,21 @@ struct sniff_ip {
 };
 const int SIZE_IP = sizeof(sniff_ip);
 
+struct sniff_ipv6 {
+    sniff_ipv6 () 
+        :ip_vtcfl(0x60000000),
+         ip_len(20), ip_nxt(0x06),
+         ip_hopl(16) {
+             inet_pton(AF_INET6, "2001:db8:8714:3a90::01", &ip_src);
+             inet_pton(AF_INET6, "2001:db8:8714:3a90::02", &ip_dst);
+    }
+    uint32_t ip_vtcfl;
+    uint16_t ip_len;
+    uint8_t ip_nxt;
+    uint8_t ip_hopl;
+
+    struct in6_addr ip_src, ip_dst;
+};
 
 /* TCP header */
 typedef uint32_t tcp_seq;
