@@ -4,6 +4,9 @@ cd build
 cmake ../
 cd ../bin
 
-# Run CABDaemon and controller
+# Run CABDaemon
 ./CABDaemon rulefile 
-ryu-manager
+
+# Run ryu-controller
+cd ../controller
+ryu-manager cab_switch_cab ../config/ryu_config.ini
