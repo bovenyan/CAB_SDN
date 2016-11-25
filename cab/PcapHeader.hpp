@@ -49,8 +49,8 @@ struct sniff_ipv6 {
         :ip_vtcfl(0x60000000),
          ip_len(20), ip_nxt(0x06),
          ip_hopl(16) {
-             inet_pton(AF_INET6, "2001:db8:8714:3a90::01", &ip_src);
-             inet_pton(AF_INET6, "2001:db8:8714:3a90::02", &ip_dst);
+             inet_pton(AF_INET6, "2001:db8:8714:3a01::", &ip_src);
+             inet_pton(AF_INET6, "2001:db8:8714:3a02::", &ip_dst);
     }
     uint32_t ip_vtcfl;
     uint16_t ip_len;

@@ -8,14 +8,17 @@
 #include <linux/netfilter.h>
 #include <linux/netfilter_ipv4.h>
 
+#include <net/ip.h>
+#include <net/tcp.h>
+
 /* classify ecn 11 packet  */
 
 static struct nf_hook_ops nfho_pre;
-char dev_name[] = "p7p3";
-unsigned char srv_mac[ETH_ALEN] = {0x00,0x00,0x00,0x00,0x00,0x11};
+char d_name[] = "p7p3";
+unsigned char srv_mac[ETH_ALEN] = {0xa0,0x36,0x9f,0x71,0x14,0x04};
 
 
-if (LINUX_VERSION_CODE <= KERNEL_VERSION(3,12,62))
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(3,12,62))
     unsigned int pre_hook_func(unsigned int hooknum, struct sk_buff **skb,
                                const struct net_device *in, const struct net_device *out,
                                int (*okfn)(struct sk_buff *))    // kernel 3.12
@@ -28,22 +31,25 @@ if (LINUX_VERSION_CODE <= KERNEL_VERSION(3,12,62))
     if (skb->len < 40)
         return NF_ACCEPT;
 
-    if (!strncmp(in->name, dev_name, 4)){
+    if (!strncmp(in->name, d_name, 4)){
         unsigned int version;
 
         version = htonl(*(uint32_t *)(skb->data)); 
         
         if (version & 8 == 6){
+            struct ethhdr * ethh;
+            struct net_device * eth_dev;
+
             printk("recv ipv6 pkt... echoing");
             
             skb->pkt_type = PACKET_OUTGOING;
-            eth_dev = dev_get_by_name(&init_net, dev_name);
+            eth_dev = dev_get_by_name(&init_net, d_name);
             skb->dev = eth_dev;
-            etth = (struct ethhdr *) skb_push(skb, ETH_HLEN);
+            ethh = (struct ethhdr *) skb_push(skb, ETH_HLEN);
             skb_reset_mac_header(skb);
             skb->protocol = ethh->h_proto = htons(ETH_P_IP);
             memcpy (ethh->h_source, eth_dev->dev_addr, ETH_ALEN);
-            memcpy (ethh->h_dest, vm_mac, ETH_ALEN);
+            memcpy (ethh->h_dest, srv_mac, ETH_ALEN);
 
             dev_hold(skb->dev);
             dev_put(skb->dev);
