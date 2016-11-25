@@ -11,6 +11,7 @@
 #include "PcapHeader.hpp"
 #include "TimeSpec.hpp"
 #include "Address.hpp"
+#include <getopt.h>
 
 #define MAX_ETHER_FRAME_LEN 1514
 #define READ_TIMEOUT 1000
@@ -120,21 +121,64 @@ void print_help() {
 }
 
 int main(int argc, char * argv[]) {
-    /* parse arguments  */
-    const char * trace_file_str = NULL;
-    const char * if_name = NULL;
+    /* configuration  */
+    char * trace_file_str = NULL;
+    char * if_name = NULL;
+    char * stat_file_str = NULL;
     bool flow_gen_flag = true;
-
+    int factor = 1;
+    int ipv6_flag = 1;
 
     pcap_t * pd = nullptr;
     char pebuf[PCAP_ERRBUF_SIZE];
 
-    int factor = 1;
+    int getopt_res;
+    while (1) {
+        static struct option tracegen_options[] = 
+        {
+            {"ipv6",        no_argument,                &ipv6_flag, 1},
+            {"ipv4",        no_argument,                &ipv6_flag, 0},
+            {"file",        required_argument,          0, 'f'},
+            {"interface",   required_argument,          0, 'i'},
+            {"stats",       required_argument,          0, 's'},
+            {0,             0,                          0,  0}
+        };
 
-    if (argc < 4) {
-        print_help();
-        return 1;
+        int option_index = 0;
+
+        getopt_res = getopt_long (argc, argv, "f:i:s:", 
+                                  tracegen_options, &option_index);
+
+        if (getopt_res == -1)
+            break;
+
+        switch (getopt_res) {
+            case 0:
+                if (tracegen_options[option_index].flag != 0)
+                    break;
+            case 'f':
+                trace_file_str = optarg;
+                break;
+            case 'i':
+                if_name = optarg;
+                break;
+            case 's':
+                stat_file_str = optarg;
+                break;
+            case '?':
+                print_help();
+                break;
+            default:
+                abort();
+        }
     }
+
+    if (if_name == NULL || trace_file_str == NULL || stat_file_str == NULL){
+        print_help();
+        return 0;
+    }
+
+    return 0;
 
     trace_file_str = argv[1];
 
