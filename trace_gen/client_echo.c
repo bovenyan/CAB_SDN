@@ -28,19 +28,20 @@ unsigned char srv_mac[ETH_ALEN] = {0xa0,0x36,0x9f,0x71,0x14,0x04};
                                const struct net_device *out, int(*okfn)(struct sk_buff *))
 #endif
 {
-    if (skb->len < 40)
+    if (skb->len < 20)
         return NF_ACCEPT;
 
     if (!strncmp(in->name, d_name, 4)){
         unsigned int version;
 
-        version = htonl(*(uint32_t *)(skb->data)); 
-        
-        if (version & 8 == 6){
+        version = (*(uint32_t *)(skb->data)); 
+        printk("recev something %u\n", version);
+
+        if ((version & 96) == 96){
             struct ethhdr * ethh;
             struct net_device * eth_dev;
 
-            printk("recv ipv6 pkt... echoing");
+            printk("recv ipv6 pkt... echoing\n");
             
             skb->pkt_type = PACKET_OUTGOING;
             eth_dev = dev_get_by_name(&init_net, d_name);
@@ -65,18 +66,18 @@ unsigned char srv_mac[ETH_ALEN] = {0xa0,0x36,0x9f,0x71,0x14,0x04};
 static int __init cli_echo_init(void) {
     nfho_pre.hook = pre_hook_func;           // function to call when conditions below met
     nfho_pre.hooknum = NF_INET_PRE_ROUTING;  // called right after packet recieved, first hook in Netfilter
-    nfho_pre.pf = PF_INET;                   // IPV4 packets
+    nfho_pre.pf = PF_INET6;                   // IPV4 packets
     nfho_pre.priority = NF_IP_PRI_FIRST;     // set to highest priority over all other hook functions
     nf_register_hook(&nfho_pre);             // register hook
 
-    printk("pre hook registered");
+    printk("pre hook registered\n");
 
     return 0;
 }
 
 static void __exit cli_echo_exit(void) {
     nf_unregister_hook(&nfho_pre);
-    printk("pre hook unregistered");
+    printk("pre hook unregistered\n");
 }
 
 module_init(cli_echo_init);
