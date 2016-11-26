@@ -17,7 +17,6 @@ class pkt_h:
 
 
 class bktOrR(object):
-
     def __init__(self, ip_src=0, ip_src_mask=0, ip_dst=0, ip_dst_mask=0, port_src=0,
                  port_src_mask=0, port_dst=0, port_dst_mask=0, priority=0):
         self.ip_src = ip_src
@@ -38,10 +37,24 @@ class bktOrR(object):
                self.port_dst, self.port_dst_mask, self.priority)
 
 
-def ipv4_to_str(integre):
-    ip_list = [str((integre >> (24 - (n * 8)) & 255)) for n in range(4)]
+def ipv4_to_str(integer):
+    ip_list = [str((integer >> (24 - (n * 8)) & 255)) for n in range(4)]
     return '.'.join(ip_list)
 
+
+# TODO: verify this function
+def ipv4_port_to_ipv6(ipv4, ipv4_mask, port, port_mask):
+    # process ip
+    ip_list = [hex(ipv4 >> (16 - (n * 8)) & 255) for n in range(4)]
+    port_list = [hex(ipv4 >> (16 - (n * 8)) & 255) for n in range(4)]
+    ipv6 = ':'.join(ip_list + port_list)
+
+    # process tcp port
+    ip_mask_list = [hex(ipv4_mask >> (16 - (n * 8)) & 255) for n in range(4)]
+    port_mask_list = [hex(port_mask >> (16 - (n * 8)) & 255) for n in range(4)]
+    ipv6_mask = ':'.join(ip_list + port_list)
+
+    return (ipv6, ipv6_mask)
 
 def ipv4_to_int(string):
     ip = string.split('.')
@@ -51,6 +64,8 @@ def ipv4_to_int(string):
         b = int(b)
         i = (i << 8) | b
     return i
+
+
 
 
 def eth_to_str(integer):
@@ -139,10 +154,10 @@ class cab_client:
         for i in range(rules_num):
             rules.append(bktOrR())
             # include port
-            (rules[i].ip_src, rules[i].ip_src_mask, 
+            (rules[i].ip_src, rules[i].ip_src_mask,
              rules[i].ip_dst, rules[i].ip_dst_mask,
              rules[i].port_src, rules[i].port_src_mask,
-             rules[i].port_dst, rules[i].port_dst_mask, 
+             rules[i].port_dst, rules[i].port_dst_mask,
              rules[i].priority) = struct.unpack('!IIIIIIIII',
                                                  body_raw[i * 36: i * 36 + 36])
         return rules

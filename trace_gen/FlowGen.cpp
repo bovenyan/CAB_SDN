@@ -97,6 +97,7 @@ int make_pkt_ipv6(const addr_5tup & header, uint8_t ** data, uint32_t * pkt_len)
     *eth = sniff_ethernet();
 
     /* Map ipv4:port to ipv6  */
+    // TODO: check big edian/small edian
     *ip = sniff_ipv6();
     *tcp = sniff_tcp();
     *(uint32_t *)(ip->ip_src.s6_addr) = htonl(header.addrs[0]);
@@ -116,7 +117,7 @@ int make_pkt_ipv6(const addr_5tup & header, uint8_t ** data, uint32_t * pkt_len)
 }
 
 void print_help() {
-    cerr << "Usage: FlowGen {-s trace_file -i interface -f pcap_file -F factor}";
+    cerr << "Usage: FlowGen {-s stats_file -i interface -f pcap_file -F factor -ipv6/ipv4}";
     cerr << endl;
 }
 
@@ -234,7 +235,11 @@ int main(int argc, char * argv[]) {
             //     ofs << ph_str << endl;
             // }
 
-            make_pkt(pkt_header,&pkt,&pkt_len);
+            if (ipv6_flag) {
+                make_pkt_ipv6(pkt_header,&pkt,&pkt_len);
+            } else {
+                make_pkt(pkt_header,&pkt,&pkt_len);
+            }
             pcap_sendpacket(pd,pkt,pkt_len);
 
             delete [] pkt;

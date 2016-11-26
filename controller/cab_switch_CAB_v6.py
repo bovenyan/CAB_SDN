@@ -92,7 +92,7 @@ class CABSwitch(app_manager.RyuApp):
 
         # set table0 default rule:
         # port1->port2: go to controller
-        match = parser.OFPMatch()
+        match = parser.OFPMatch(in_port=1)
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER)]
 
         inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
@@ -105,7 +105,7 @@ class CABSwitch(app_manager.RyuApp):
 
         inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
                                              actions)]
-        self.add_flow(datapath, 0, 1, match, inst, ofproto.OFP_NO_BUFFER, 0)
+        self.add_flow(datapath, 0, 0, match, inst, ofproto.OFP_NO_BUFFER, 0)
 
         # set table1 default : drop
         match = parser.OFPMatch()
@@ -225,6 +225,7 @@ class CABSwitch(app_manager.RyuApp):
             return
 
         # try to parse tcp ports converted from higher bits of ipv6
+        # TODO confirm the LSB/MSB of port and ip
         src_port = ip_src & 0x0000000000000000ffffffffffffffff
         dst_port = ip_dst & 0x0000000000000000ffffffffffffffff
         ip_src = ip_src >> 32
@@ -263,14 +264,15 @@ class CABSwitch(app_manager.RyuApp):
         # only need to flowmod the bucket once.
 
         bucket = rules[0]
+
         bucket_str = ipv4_to_str(bucket.ip_src) + '/' \
             + ipv4_to_str(bucket.ip_src_mask) + '\t' \
             + ipv4_to_str(bucket.ip_dst) + '/' \
             + ipv4_to_str(bucket.ip_dst_mask) + '\t' \
-            + eth_to_str(bucket.port_src) + '/' \
-            + eth_mask_to_str(bucket.port_src_mask) + '\t' \
-            + eth_to_str(bucket.port_dst) + '/'\
-            + eth_mask_to_str(bucket.port_dst_mask)
+            + str(bucket.port_src) + '/' \
+            + str(bucket.port_src_mask) + '\t' \
+            + str(bucket.port_dst) + '/'\
+            + str(bucket.port_dst_mask)
 
         if bucket_str not in self.buckets:
             self.buckets[bucket_str] = time.time() + timeout
@@ -284,53 +286,48 @@ class CABSwitch(app_manager.RyuApp):
             return
 
         # first install rules, rules[0] is bucket
+        # TODO: ryu translate ipv4/port&mask to ipv6&bitmask
         for rule in rules[1:]:
-            match = parser.OFPMatch()
-            match.set_dl_type(ether.ETH_TYPE_IP)
-            # match.set_ip_proto(inet.IPPROTO_TCP)
-            match.set_ipv4_src_masked(rule.ip_src, rule.ip_src_mask)
-            match.set_ipv4_dst_masked(rule.ip_dst, rule.ip_dst_mask)
-            # use eth_to_str to convert ports to eth addrs
-            dl_src = mac.haddr_to_bin(eth_to_str(rule.port_src))
-            dl_dst = mac.haddr_to_bin(eth_to_str(rule.port_dst))
-            dl_src_mask = mac.haddr_to_bin(eth_mask_to_str(rule.port_src_mask))
-            dl_dst_mask = mac.haddr_to_bin(eth_mask_to_str(rule.port_dst_mask))
-            match.set_dl_src_masked(dl_src, dl_src_mask)
-            match.set_dl_dst_masked(dl_dst, dl_dst_mask)
-
-            actions = [parser.OFPActionOutput(3)]
+            match = parser.OFPMatch(in_port=1, eth_type=ether.ETH_TYPE_IPV6,
+                                    ipv6_src=ipv4_port_to_ipv6(rule.ip_src,
+                                                               rule.ip_src_mask,
+                                                               rule.port_src,
+                                                               rule.port_src_mask),
+                                    ipv6_dst=ipv4_port_to_ipv6(rule.ip_dst,
+                                                               rule.ip_dst_mask,
+                                                               rule.port_dst,
+                                                               rule.port_dst_mask))
+            actions = [parser.OFPActionOutput(2)]
             inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
                                                  actions)]
             self.add_flow(datapath, 1, rule.priority,
                           match, inst, ofproto.OFP_NO_BUFFER, timeout)
 
-            self.logger.debug("install flow %s %s %s %s %s %s %s %s",
-                              ipv4_to_str(rule.ip_src),
-                              ipv4_to_str(rule.ip_src_mask),
-                              ipv4_to_str(rule.ip_dst),
-                              ipv4_to_str(rule.ip_dst_mask),
-                              eth_to_str(rule.port_src),
-                              eth_mask_to_str(rule.port_src_mask),
-                              eth_to_str(rule.port_dst),
-                              eth_mask_to_str(rule.port_dst_mask))
+            self.logger.debug("install flow %s, %s",
+                              str(ipv4_port_to_ipv6(rule.ip_src,
+                                                    rule.ip_src_mask,
+                                                    rule.port_src,
+                                                    rule.port_src_mask)),
+                              str(ipv4_port_to_ipv6(rule.ip_dst,
+                                                    rule.ip_dst_mask,
+                                                    rule.port_dst,
+                                                    rule.port_dst_mask)))
+
 
         # second, send a barrier to ensure all rules installation are done
         datapath.send_barrier()
 
         # third, install bucket
         bucket = rules[0]
-        match = parser.OFPMatch()
-        match.set_dl_type(ether.ETH_TYPE_IP)
-        # imatch.set_ip_proto(inet.IPPROTO_TCP)
-        match.set_ipv4_src_masked(bucket.ip_src, bucket.ip_src_mask)
-        match.set_ipv4_dst_masked(bucket.ip_dst, bucket.ip_dst_mask)
-        # use eth_to_str to convert ports to eth addrs
-        dl_src = mac.haddr_to_bin(eth_to_str(bucket.port_src))
-        dl_dst = mac.haddr_to_bin(eth_to_str(bucket.port_dst))
-        dl_src_mask = mac.haddr_to_bin(eth_mask_to_str(bucket.port_src_mask))
-        dl_dst_mask = mac.haddr_to_bin(eth_mask_to_str(bucket.port_dst_mask))
-        match.set_dl_src_masked(dl_src, dl_src_mask)
-        match.set_dl_dst_masked(dl_dst, dl_dst_mask)
+        match = parser.OFPMatch(in_port=1, eth_type=ether.ETH_TYPE_IPV6,
+                                ipv6_src=ipv4_port_to_ipv6(bucket.ip_src,
+                                                           bucket.ip_src_mask,
+                                                           bucket.port_src,
+                                                           bucket.port_src_mask),
+                                ipv6_dst=ipv4_port_to_ipv6(bucket.ip_dst,
+                                                           bucket.ip_dst_mask,
+                                                           bucket.port_dst,
+                                                           bucket.port_dst_mask))
 
         inst = [parser.OFPInstructionGotoTable(1)]
         self.add_flow(datapath, 0, 100, match, inst, msg.buffer_id, timeout)
@@ -338,15 +335,15 @@ class CABSwitch(app_manager.RyuApp):
         if msg.buffer_id == ofproto.OFP_NO_BUFFER:
             self.handle_no_buffer(datapath, msg.data, in_port)
 
-        self.logger.debug("install bucket %s %s %s %s %s %s %s %s",
-                          ipv4_to_str(bucket.ip_src),
-                          ipv4_to_str(bucket.ip_src_mask),
-                          ipv4_to_str(bucket.ip_dst),
-                          ipv4_to_str(bucket.ip_dst_mask),
-                          eth_to_str(bucket.port_src),
-                          eth_mask_to_str(bucket.port_src_mask),
-                          eth_to_str(bucket.port_dst),
-                          eth_mask_to_str(bucket.port_dst_mask))
+        self.logger.debug("install bucket %s %s",
+                          str(ipv4_port_to_ipv6(bucket.ip_src,
+                                                bucket.ip_src_mask,
+                                                bucket.port_src,
+                                                bucket.port_src_mask)),
+                          str(ipv4_port_to_ipv6(bucket.ip_dst,
+                                                bucket.ip_dst_mask,
+                                                bucket.port_dst,
+                                                bucket.port_dst_mask)))
 
     def monitor(self):
         with open('./results/results_cab_'+self.tracefile, 'w') as f:
