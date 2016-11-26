@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
     std::string treePreallocateFileName;
     std::string paraFileName;
     bool bIs2tup;
-    int iTresholdHard;
+    int iThresholdHard;
     bool bIs_hotspot_prob_b_mutation;
     bool bIs_pFlow_pruning_gen_evolving;
 
@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) {
     // rList.print("../para_src/rList.dat");
 
     // generate bucket tree
-    bucket_tree bTree(rList, iTresholdHard, bIs2tup);
+    bucket_tree bTree(rList, iThresholdHard, bIs2tup);
     // bTree.pre_alloc();
     bTree.print_tree(treePreallocateFileName);
 

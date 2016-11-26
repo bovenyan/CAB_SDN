@@ -61,20 +61,20 @@ int make_pkt(const addr_5tup & header, uint8_t ** data, uint32_t * pkt_len) {
     uint32_t dst_port = htonl(header.addrs[3]);
     memcpy(eth->ether_shost + 2, &src_port, 4);
     memcpy(eth->ether_dhost + 2, &dst_port, 4);
-    
+
     /* IP source  */
     *ip = sniff_ip();
     *tcp = sniff_tcp();
     ip->ip_src.s_addr = htonl(header.addrs[0]);
     ip->ip_dst.s_addr = htonl(header.addrs[1]);
     ip->ip_len = htonl(buffer_size - sizeof(sniff_ethernet));
-    
+
     /* make time stamp */
     timespec * timestamp = (timespec *)body;
     clock_gettime(CLOCK_REALTIME,timestamp);
-    
+
     *data = buffer;
-    *pkt_len = buffer_size; 
+    *pkt_len = buffer_size;
 
     return 0;
 }
@@ -88,35 +88,35 @@ int make_pkt_ipv6(const addr_5tup & header, uint8_t ** data, uint32_t * pkt_len)
     memset(buffer, 0, buffer_size);
 
     sniff_ethernet * eth = (sniff_ethernet *)buffer;
-    sniff_ipv6 * ip = (sniff_ip *)(buffer+sizeof(sniff_ethernet));
+    sniff_ipv6 * ip = (sniff_ipv6 *)(buffer+sizeof(sniff_ethernet));
     sniff_tcp * tcp = (sniff_tcp *)(buffer + sizeof(sniff_ethernet) +
                                     sizeof(sniff_ip));
     uint8_t * body = buffer + sizeof(sniff_ethernet) +
                      sizeof(sniff_ip) + sizeof(sniff_tcp);
 
     *eth = sniff_ethernet();
-    
+
     /* Map ipv4:port to ipv6  */
-    *ip = sniff_ip();
+    *ip = sniff_ipv6();
     *tcp = sniff_tcp();
     *(uint32_t *)(ip->ip_src.s6_addr) = htonl(header.addrs[0]);
     *(uint32_t *)(ip->ip_src.s6_addr + 8) = htonl(header.addrs[2]);
     *(uint32_t *)(ip->ip_dst.s6_addr) = htonl(header.addrs[1]);
     *(uint32_t *)(ip->ip_dst.s6_addr + 8) = htonl(header.addrs[3]);
     ip->ip_len = htonl(buffer_size - sizeof(sniff_ethernet));
-    
+
     /* make time stamp */
     timespec * timestamp = (timespec *)body;
     clock_gettime(CLOCK_REALTIME, timestamp);
-    
+
     *data = buffer;
-    *pkt_len = buffer_size; 
-    
+    *pkt_len = buffer_size;
+
     return 0;
 }
 
 void print_help() {
-    cerr << "Usage: FlowGen {trace_file} {-i interface |-f pcap_file} factor";
+    cerr << "Usage: FlowGen {-s trace_file -i interface -f pcap_file -F factor}";
     cerr << endl;
 }
 
@@ -125,7 +125,6 @@ int main(int argc, char * argv[]) {
     char * trace_file_str = NULL;
     char * if_name = NULL;
     char * stat_file_str = NULL;
-    bool flow_gen_flag = true;
     int factor = 1;
     int ipv6_flag = 1;
 
@@ -134,79 +133,71 @@ int main(int argc, char * argv[]) {
 
     int getopt_res;
     while (1) {
-        static struct option tracegen_options[] = 
-        {
+        static struct option tracegen_options[] = {
             {"ipv6",        no_argument,                &ipv6_flag, 1},
             {"ipv4",        no_argument,                &ipv6_flag, 0},
+            {"help",        no_argument,                0, 'h'},
             {"file",        required_argument,          0, 'f'},
             {"interface",   required_argument,          0, 'i'},
             {"stats",       required_argument,          0, 's'},
+            {"scale",       required_argument,          0, 'S'},
             {0,             0,                          0,  0}
         };
 
         int option_index = 0;
 
-        getopt_res = getopt_long (argc, argv, "f:i:s:", 
+        getopt_res = getopt_long (argc, argv, "f:i:s:F:",
                                   tracegen_options, &option_index);
 
         if (getopt_res == -1)
             break;
 
         switch (getopt_res) {
-            case 0:
-                if (tracegen_options[option_index].flag != 0)
-                    break;
-            case 'f':
-                trace_file_str = optarg;
+        case 0:
+            if (tracegen_options[option_index].flag != 0)
                 break;
-            case 'i':
-                if_name = optarg;
-                break;
-            case 's':
-                stat_file_str = optarg;
-                break;
-            case '?':
-                print_help();
-                break;
-            default:
-                abort();
+        case 'f':
+            trace_file_str = optarg;
+            break;
+        case 'i':
+            if_name = optarg;
+            break;
+        case 's':
+            stat_file_str = optarg;
+            break;
+        case 'F':
+            factor = atoi(optarg);
+            break;
+        case 'h':
+            print_help();
+            return 0;
+        case '?':
+            print_help();
+            return 0;
+        default:
+            abort();
         }
     }
 
-    if (if_name == NULL || trace_file_str == NULL || stat_file_str == NULL){
+    if (if_name == NULL || trace_file_str == NULL || stat_file_str == NULL) {
         print_help();
         return 0;
     }
 
-    return 0;
+    // printf("%s, %s, %s, %i, %i\n", trace_file_str, if_name, stat_file_str, ipv6_flag, factor);
+    // return 0;
 
-    trace_file_str = argv[1];
-
-    if (strcmp("-i", argv[2]) == 0) {
-        /* this is for sending packets */
-        pd = pcap_open_live(argv[3], MAX_ETHER_FRAME_LEN, 1,
-                            READ_TIMEOUT, pebuf);
-    } else if (strcmp("-f",argv[2]) == 0) {
-        pd = pcap_open_dead(DLT_EN10MB, 144);
-        pcap_dumper_t * pfile = pcap_dump_open(pd,argv[3]);
-    } else {
-        cerr << "Wrong input" << endl;
-        print_help();
-        return 3;
-    }
-
-    if (argc == 5) {
-        factor = atoi(argv[4]);
-    }
+    pd = pcap_open_live(if_name, MAX_ETHER_FRAME_LEN, 1,
+                        READ_TIMEOUT, pebuf);
 
     /* start sending  */
     ifstream trace_file(trace_file_str);
 
     if (!trace_file.is_open()) {
         cerr << "Can not open trace file : " << trace_file_str << endl;
+        print_help();
         return 2;
     }
-
 
     try {
         io::filtering_istream in;
