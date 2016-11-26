@@ -226,10 +226,10 @@ class CABSwitch(app_manager.RyuApp):
 
         # try to parse tcp ports converted from higher bits of ipv6
         # TODO confirm the LSB/MSB of port and ip
-        src_port = ip_src & 0x0000000000000000ffffffffffffffff
-        dst_port = ip_dst & 0x0000000000000000ffffffffffffffff
-        ip_src = ip_src >> 32
-        ip_dst = ip_dst >> 32
+        ip_src = ip_src & 0x0000000000000000ffffffffffffffff
+        ip_dst = ip_dst & 0x0000000000000000ffffffffffffffff
+        src_port = ip_src >> 64
+        dst_port = ip_dst >> 64
 
         key = ip_src + ip_dst + str(src_port) + str(dst_port)
 
@@ -239,7 +239,9 @@ class CABSwitch(app_manager.RyuApp):
             return
         self.query_map[key] = time.time()
 
-        request = pkt_h(ipv4_to_int(ip_src), ipv4_to_int(ip_dst),
+        #debug
+        print(ip_src, ip_ds, src_port, dst_port)
+        request = pkt_h(ip_src, ip_dst,
                         src_port, dst_port)
 
         # request_str = str(ip_src)+'\t'+str(ip_dst)+ \
