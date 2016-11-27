@@ -213,7 +213,10 @@ int main(int argc, char * argv[]) {
         /* for recording packet sent */
         // std::ofstream ofs;
         // ofs.open("./flows", std::ofstream::out);
-        while(getline(in,line)) {
+        //for debugging use, send 2 flows.
+        int iTest2FLow = 2;
+        while(getline(in,line)&&iTest2FLow) {
+            --iTest2FLow;
             addr_5tup pkt_header(line);
 
             uint8_t * pkt = nullptr;

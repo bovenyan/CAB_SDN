@@ -239,7 +239,7 @@ class CABSwitch(app_manager.RyuApp):
             return
         self.query_map[key] = time.time()
 
-        #debug
+        # debug:check the ipv4 and port from switch to controller through OpenFLow
         print(ip_src, ip_ds, src_port, dst_port)
         request = pkt_h(ip_src, ip_dst,
                         src_port, dst_port)
@@ -348,7 +348,7 @@ class CABSwitch(app_manager.RyuApp):
                                                 bucket.port_dst_mask)))
 
     def monitor(self):
-        with open('./results/results_cab_'+self.tracefile, 'w') as f:
+        with open('./results_cab_'+self.tracefile, 'w') as f:
             f.write('time\tqueries\tPacketIn\tFlowMod\n')
             while True:
                 string = str(time.time()) + '\t' \
