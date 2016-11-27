@@ -52,7 +52,7 @@ def ipv4_port_to_ipv6(ipv4, ipv4_mask, port, port_mask):
     # process tcp port
     ip_mask_list = [hex(ipv4_mask >> (48 - (n * 16)) & 65535) for n in range(4)]
     port_mask_list = [hex(port_mask >> (48 - (n * 16)) & 65535) for n in range(4)]
-    ipv6_mask = ':'.join(ip_mask_list + port_mask_list)
+    ipv6_mask = ':'.join(port_mask_list + ip_mask_list)
 
     return (ipv6, ipv6_mask)
 

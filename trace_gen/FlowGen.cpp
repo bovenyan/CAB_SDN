@@ -100,10 +100,10 @@ int make_pkt_ipv6(const addr_5tup & header, uint8_t ** data, uint32_t * pkt_len)
     // TODO: check big edian/small edian
     *ip = sniff_ipv6();
     *tcp = sniff_tcp();
-    *(uint32_t *)(ip->ip_src.s6_addr) = htonl(header.addrs[0]);
-    *(uint32_t *)(ip->ip_src.s6_addr + 8) = htonl(header.addrs[2]);
-    *(uint32_t *)(ip->ip_dst.s6_addr) = htonl(header.addrs[1]);
-    *(uint32_t *)(ip->ip_dst.s6_addr + 8) = htonl(header.addrs[3]);
+    *(uint32_t *)(ip->ip_src.s6_addr + 12) = htonl(header.addrs[0]);
+    *(uint32_t *)(ip->ip_src.s6_addr + 4) = htonl(header.addrs[2]);
+    *(uint32_t *)(ip->ip_dst.s6_addr + 12) = htonl(header.addrs[1]);
+    *(uint32_t *)(ip->ip_dst.s6_addr + 4) = htonl(header.addrs[3]);
     ip->ip_len = htonl(buffer_size - sizeof(sniff_ethernet));
 
     /* make time stamp */
