@@ -72,7 +72,7 @@ class bucket_tree {
     void static_traf_test(const string &);
     void evolving_traf_test_dyn(const std::vector<b_rule> &, const std::vector<b_rule> &, std::ofstream &, double,  pair<size_t, size_t> & , size_t &);
     void evolving_traf_test_stat(const std::vector<b_rule> &, const std::vector<b_rule> &, std::ofstream &);
-    void print_tree(const string &, bool = false); // const
+    void print_tree(const string & filename, bool details = false); // const
 
 };
 

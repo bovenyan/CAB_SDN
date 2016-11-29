@@ -12,7 +12,7 @@ endif()
 
 add_definitions(-DBOOST_LOG_DYN_LINK)
 
-add_executable(TracePrepare_blk TracePrepare_blk.cpp TraceGen.cpp)
+#add_executable(TracePrepare_blk TracePrepare_blk.cpp TraceGen.cpp)
 add_executable(TracePrepare TracePrepare.cpp TraceGen.cpp)
 add_executable(FlowGen FlowGen.cpp)
 
@@ -25,14 +25,14 @@ if(UNIX)
         z
         pcap
         )
-    target_link_libraries(
-        TracePrepare_blk
-        cab
-        ${Boost_LIBRARIES}
-        pthread
-        z
-        pcap
-        )
+    # target_link_libraries(
+    #     TracePrepare_blk
+    #     cab
+    #     ${Boost_LIBRARIES}
+    #     pthread
+    #     z
+    #     pcap
+    #     )
     target_link_libraries(
         FlowGen
         cab
