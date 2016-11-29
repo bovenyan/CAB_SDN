@@ -22,6 +22,165 @@ namespace io = boost::iostreams;
 typedef boost::unordered_map<addr_5tup, uint32_t>::iterator Map_iter;
 typedef vector<fs::path> Path_Vec_T;
 
+/* ---------------------------- tgen_para ----------------------- */
+tgen_para::tgen_para() {
+    /* default para settings */
+    flow_rate = 100;
+    simuT = 1800;
+
+    cold_prob = 0;
+    hot_rule_thres = 6;
+    hot_candi_no = 40;
+    hotspot_no = 10;
+    hotvtime = 10;
+
+    mut_scalar[0] = 4;
+    mut_scalar[1] = 1;
+
+    evolving = false;
+    evolving_time = 20;
+    evolving_no = 10;
+
+    prep_mutate = false;
+}
+
+tgen_para::tgen_para(const tgen_para & another_para) {
+    this->simuT = another_para.simuT;
+    this->flow_rate = another_para.flow_rate;
+    this->cold_prob = another_para.cold_prob;
+    this->hotcandi_str = another_para.hotcandi_str;
+    this->hotspot_ref = another_para.hotspot_ref;
+
+    for (int i = 0; i < 4; ++i)
+        this->scope[i] = another_para.scope[i];
+
+    this->mut_scalar[0] = another_para.mut_scalar[0];
+    this->mut_scalar[1] = another_para.mut_scalar[1];
+
+    this->prep_mutate = another_para.prep_mutate;
+
+    this->hot_rule_thres = another_para.hot_rule_thres;
+    this->hot_candi_no = another_para.hot_candi_no;
+
+    this->hotvtime = another_para.hotvtime;
+    this->evolving_time = another_para.evolving_time;
+    this->evolving_no = another_para.evolving_no;
+
+    this->trace_root_dir = another_para.trace_root_dir;
+    this->flowInfoFile_str = another_para.flowInfoFile_str;
+    this->pcap_dir = another_para.pcap_dir;
+    this->parsed_pcap_dir = another_para.parsed_pcap_dir;
+}
+
+tgen_para::tgen_para(string config_file):tgen_para() {
+    /* read config file */
+    ifstream config_stream(config_file);
+    string config_line;
+
+    while (getline(config_stream, config_line)) {
+        vector<string> tmp_arr;
+        boost::split(tmp_arr, config_line, boost::is_any_of(" \t"),
+                     boost::token_compress_on);
+
+        if (tmp_arr.size() >= 2) {
+            /* this is a comment */
+            if (tmp_arr[0][0] == '#')
+                continue;
+
+            if (tmp_arr[0] == "gen_root_dir") {
+                trace_root_dir = tmp_arr[1];
+                continue;
+            }
+
+            if (tmp_arr[0] == "meta_dir") {
+                flowInfoFile_str = tmp_arr[1] + "/flow_info";
+                hotcandi_str = tmp_arr[1] + "/hotspot.dat";
+                hotspot_ref = tmp_arr[1] + "/tree_pr.dat";
+                continue;
+            }
+
+            if (tmp_arr[0] == "flow_arrival_rate") {
+                flow_rate = boost::lexical_cast<double>(tmp_arr[1]);
+                continue;
+            }
+
+            if (tmp_arr[0] == "trace_len") {
+                simuT = boost::lexical_cast<double>(tmp_arr[1]);
+                continue;
+            }
+
+            if (tmp_arr[0] == "cold_probability") {
+                cold_prob = boost::lexical_cast<double>(tmp_arr[1]);
+                continue;
+            }
+
+            if (tmp_arr[0] == "hotspot_number") {
+                hotspot_no = boost::lexical_cast<uint32_t>(tmp_arr[1]);
+                continue;
+            }
+
+            if (tmp_arr[0] == "scope" && tmp_arr.size() >= 5) {
+                for(int i = 0; i < 4; ++i) {
+                    scope[i] = boost::lexical_cast<uint32_t>(tmp_arr[i+1]);
+                }
+                continue;
+            }
+
+            if (tmp_arr[0] == "mutate_scale" && tmp_arr.size() >= 3) {
+                for (int i = 0; i < 2; ++i) {
+                    mut_scalar[i] = boost::lexical_cast<uint32_t>(tmp_arr[i+1]);
+                }
+                continue;
+            }
+
+            if (tmp_arr[0] == "mutate_at_hot_prep") {
+                if (tmp_arr[1] == "true")
+                    prep_mutate = true;
+                continue;
+            }
+
+            if (tmp_arr[0] == "hot_rule_size_thres") {
+                hot_rule_thres = boost::lexical_cast<uint32_t>(tmp_arr[1]);
+                continue;
+            }
+
+            if (tmp_arr[0] == "hotspot_candidate_no") {
+                hot_candi_no = boost::lexical_cast<uint32_t>(tmp_arr[1]);
+                continue;
+            }
+
+            if (tmp_arr[0] == "hotspot_arrival_time") {
+                hotvtime = boost::lexical_cast<double>(tmp_arr[1]);
+                continue;
+            }
+
+            if (tmp_arr[0] == "evolving") {
+                if (tmp_arr[1] == "true")
+                    evolving = true;
+            }
+            if (tmp_arr[0] == "evolving_time") {
+                evolving_time = boost::lexical_cast<double>(tmp_arr[1]);
+                continue;
+            }
+
+            if (tmp_arr[0] == "evolving_no") {
+                evolving_no = boost::lexical_cast<size_t>(tmp_arr[1]);
+                continue;
+            }
+
+            if (tmp_arr[0] == "origin_trace_dir") {
+                pcap_dir = tmp_arr[1];
+                continue;
+            }
+
+            if (tmp_arr[0] == "parsed_origin_trace_dir") {
+                parsed_pcap_dir = tmp_arr[1];
+                continue;
+            }
+        }
+    }
+}
+
 /* tracer
  *
  * function brief:
@@ -31,97 +190,38 @@ tracer::tracer():total_packet(0) {
     rList = NULL;
     flow_no = 0;
     jesusBorn = EpochT(-1,0);
+    para = tgen_para();
 }
 
-tracer::tracer(rule_list * rL):total_packet(0) {
+tracer::tracer(rule_list * rL, string para_file):total_packet(0) {
+    para = tgen_para(para_file);
     rList = rL;
     flow_no = 0;
     jesusBorn = EpochT(-1,0);
-}
 
-
-// ===================== para setting ======================================
-
-/* set_para
- *
- * input: string loc_para_str: path string of parameter file
- *
- * function brief:
- * set the parameters according to a parameter file
- */
-void tracer::set_para(string loc_para_str) {
-    ifstream ff(loc_para_str);
-    for (string str; getline(ff, str); ) {
-        vector<string> temp;
-        boost::split(temp, str, boost::is_any_of("\t"));
-        if (!temp[0].compare("hot_c")) {
-            hotcandi_str = temp[1];
-        }
-        if (!temp[0].compare("f_arr")) {
-            flow_rate = boost::lexical_cast<double>(temp[1]);
-        }
-        if (!temp[0].compare("simu_T")) {
-            simuT = boost::lexical_cast<double>(temp[1]);
-        }
-        if (!temp[0].compare("hot_no")) {
-            hotspot_no = boost::lexical_cast<uint32_t>(temp[1]);
-        }
-        if (!temp[0].compare("hot_arr")) {
-            hotvtime = boost::lexical_cast<double>(temp[1]);
-        }
-        if (!temp[0].compare("c_prob")) {
-            cold_prob = boost::lexical_cast<double>(temp[1]);
-        }
-        if (!temp[0].compare("hr_thres")) {
-            hot_rule_thres = boost::lexical_cast<uint32_t>(temp[1]);
-        }
-        if (!temp[0].compare("h_candi_no")) {
-            hot_candi_no = boost::lexical_cast<uint32_t>(temp[1]);
-        }
-        if (!temp[0].compare("hot_ref")) {
-            hotspot_ref = temp[1];
-        }
-        if (!temp[0].compare("mutate scalar")) {
-            vector<string> temp1;
-            boost::split(temp1, temp[1], boost::is_any_of(" "));
-            mut_scalar[0] = boost::lexical_cast<uint32_t>(temp1[0]);
-            mut_scalar[1] = boost::lexical_cast<uint32_t>(temp1[1]);
-        }
-        if (!temp[0].compare("root dir")) {
-            trace_root_dir = temp[1];
-        }
-        if (!temp[0].compare("flow arrival file")) {
-            flowInfoFile_str = temp[1];
-        }
-        if (!temp[0].compare("pcap dir")) {
-            pcap_dir = temp[1];
-        }
-        if (!temp[0].compare("parsed pcap dir")) {
-            parsed_pcap_dir = temp[1];
-        }
-        if (!temp[0].compare("evolving time")) {
-            evolving_time = boost::lexical_cast<double>(temp[1]);
-        }
-        if (!temp[0].compare("evolving no")) {
-            evolving_no = boost::lexical_cast<size_t> (temp[1]);
-        }
-    }
+    this->para = para;
 }
 
 void tracer::print_setup() const {
-    cout <<" ======= SETUP BRIEF: ======="<<endl;
-    cout<<"reference trace directory is in\t"<<parsed_pcap_dir<<endl;
-    cout<<"header info is in : " << flowInfoFile_str << endl;
-    cout<<"hotspot candidates are in\t"<<hotcandi_str<<endl;
-
-    cout<<"flow arrival rate set as\t"<<flow_rate <<endl;
-    cout<<"hot spots no set as\t" <<hotspot_no << endl;
-    cout<<"hot spots arrival rate\t" <<hotvtime<< endl;
-    cout<<"probability of falling cold\t"<< cold_prob << endl;
-
-    cout<<"threshold for a hot rule set as\t" <<hot_rule_thres << endl;
-    cout<<"no. of candidate of hotspots\t" <<hot_candi_no << endl;
-    cout <<" ======= SETUP DONE: ======="<<endl;
+    cout <<" ======= SETUP BRIEF: ======="<< endl;
+    cout <<"(basic)"<<endl;
+    cout <<"Avg flow arrival rate:\t\t"<<para.flow_rate<<endl;
+    cout <<"Trace length:\t\t\t"<<para.flow_rate<<" sec"<<endl;
+    cout <<"(locality)"<<endl;
+    cout <<"Cold trace probability: \t"<<para.cold_prob <<endl;
+    cout <<"Hot spot no: \t\t\t"<<para.hotspot_no <<endl;
+    cout <<"Scope: \t\t\t\t"<<para.scope[0]<<":"<<para.scope[1];
+    cout <<":"<<para.scope[2] << ":"<<para.scope[3]<<endl;
+    cout <<"Mutate scaling parameter:\t"<<para.mut_scalar[0]<<":"<<para.mut_scalar[1]<<endl;
+    cout <<"Mutate preparation: \t\t"<<para.prep_mutate<<endl;
+    cout <<"Thres size for a hot rule: \t"<<para.hot_rule_thres<<endl;
+    cout <<"No. of hot rule candidates: \t"<<para.hot_candi_no<<endl;
+    cout <<"(dirs)"<<endl;
+    cout <<"flow arrival info: \t\t" << para.flowInfoFile_str << endl;
+    cout <<"hotspot candidates are in\t" << para.hotcandi_str<<endl;
+    cout <<"parsed real trace: \t\t" << para.parsed_pcap_dir<<endl;
+    cout <<"original real trace: \t\t" << para.pcap_dir<<endl;
+    cout <<" =========== END ==========="<<endl;
 }
 
 /* trace_get_ts
@@ -132,7 +232,7 @@ void tracer::print_setup() const {
  * 	  outputs the first packet timestamp of each trace file, helps determine how many trace files to use
  */
 void tracer::trace_get_ts(string trace_ts_file) {
-    fs::path dir(parsed_pcap_dir);
+    fs::path dir(para.parsed_pcap_dir);
     ofstream ffo(trace_ts_file);
     if (fs::exists(dir) && fs::is_directory(dir)) {
         Path_Vec_T pvec;
@@ -169,7 +269,7 @@ void tracer::trace_get_ts(string trace_ts_file) {
  */
 void tracer::get_proc_files () {
     // find out how many files to process
-    fs::path dir(parsed_pcap_dir);
+    fs::path dir(para.parsed_pcap_dir);
 
     if (fs::exists(dir) && fs::is_directory(dir)) {
         Path_Vec_T pvec;
@@ -192,7 +292,7 @@ void tracer::get_proc_files () {
 
                 addr_5tup packet(str, jesusBorn); // readable
 
-                if (packet.timestamp > simuT) {
+                if (packet.timestamp > para.simuT) {
                     io::close(in);
                     break;
                 }
@@ -264,25 +364,27 @@ void tracer::merge_files(string proc_dir) const {
  * function brief:
  * probe and generate the hotspot candidate and put them into a candidate file for later header mapping
  */
-void tracer::hotspot_prob(string sav_str) {
+void tracer::hotspot_probe(string sav_str) {
     uint32_t hs_count = 0;
     ofstream ff (sav_str);
     uint32_t probe_scope[4];
     uint32_t trial = 0;
-    while (hs_count < hot_candi_no) {
+    while (hs_count < para.hot_candi_no) {
         vector<p_rule>::iterator iter = rList->list.begin();
         advance (iter, rand() % rList->list.size());
         // cout<< "candi rule:" << iter->get_str() << endl;
         addr_5tup probe_center = iter->get_random();
 
         for (uint32_t i=0; i<4; i++)
-            probe_scope[i] = scope[i]/2 + rand()%scope[i];
+            probe_scope[i] = para.scope[i]/2 + rand() % para.scope[i];
+
         h_rule hr (probe_center, probe_scope);
         cout << hr.get_str() << "\t" << hr.cal_rela(rList->list) << endl;
-        if (hr.cal_rela(rList->list) >= hot_rule_thres) {
+
+        if (hr.cal_rela(rList->list) >= para.hot_rule_thres) {
             ff << probe_center.str_easy_RW() << "\t" << probe_scope[0] << ":"
                << probe_scope[1] << ":" << probe_scope[2] << ":" <<
-               probe_scope[3]<<endl;
+               probe_scope[3] << endl;
             trial = 0;
             ++hs_count;
         }
@@ -297,61 +399,63 @@ void tracer::hotspot_prob(string sav_str) {
     ff.close();
 }
 
-/* hotspot_prob_b
+/* hotspot_prob
  *
  * input: string sav_str: output file path
  *
  * function brief:
  * generate the hotspot candidate with some reference file and put them into a candidate file for later header mapping
  */
-void tracer::hotspot_prob_b(bool mutation) {
+void tracer::hotspot_prepare() {
     uint32_t hs_count = 0;
-    if (mutation)
-        hotcandi_str += "_m";
-    ofstream ff (hotcandi_str);
-    vector <string> file;
-    ifstream in (hotspot_ref);
 
-    if (mutation)
-        cout <<"mutation scalar " << mut_scalar[0] << " " << mut_scalar[1] << endl;
+    ofstream ff (para.hotcandi_str);
+    vector <string> file;
+    ifstream in (para.hotspot_ref);
+
+    if (para.prep_mutate)
+        cout <<"mutation scalar " << para.mut_scalar[0] << " " << para.mut_scalar[1] << endl;
 
     for (string str; getline(in, str); ) {
         vector<string> temp;
         boost::split(temp, str, boost::is_any_of("\t"));
-        if (boost::lexical_cast<uint32_t>(temp.back()) > hot_rule_thres) {
-            if (mutation) {
+        if (boost::lexical_cast<uint32_t>(temp.back()) > para.hot_rule_thres) {
+            if (para.prep_mutate) {
                 b_rule br(str);
-                br.mutate_pred(mut_scalar[0], mut_scalar[1]);
+                br.mutate_pred(para.mut_scalar[0], para.mut_scalar[1]);
                 str = br.get_str();
                 size_t assoc_no = 0;
                 for (auto iter = rList->list.begin(); iter != rList->list.end(); ++iter)
                     if (br.match_rule(*iter))
                         ++assoc_no;
                 stringstream ss;
-                ss<< str << "\t" << assoc_no;
+                ss << str << "\t" << assoc_no;
                 str = ss.str();
             }
             file.push_back(str);
         }
     }
+
     random_shuffle(file.begin(), file.end());
     vector<string>::iterator iter = file.begin();
-    while (hs_count < hot_candi_no && iter < file.end()) {
+
+    while (hs_count < para.hot_candi_no && iter < file.end()) {
         ff <<*iter<<endl;
         iter++;
         ++hs_count;
     }
+
     ff.close();
 }
 
 
 vector<b_rule> tracer::gen_seed_hotspot(size_t prepare_no, size_t max_rule) {
     vector<b_rule> gen_traf_block;
-    ifstream in (hotspot_ref);
+    ifstream in (para.hotspot_ref);
     for (string str; getline(in, str); ) {
         vector<string> temp;
         boost::split(temp, str, boost::is_any_of("\t"));
-        if (boost::lexical_cast<uint32_t>(temp.back()) > hot_rule_thres) {
+        if (boost::lexical_cast<uint32_t>(temp.back()) > para.hot_rule_thres) {
             b_rule br(str);
             size_t assoc_no = 0;
             for (auto iter = rList->list.begin(); iter != rList->list.end(); ++iter) {
@@ -376,7 +480,7 @@ vector<b_rule> tracer::evolve_pattern(const vector<b_rule> & seed_hot_spot) {
     vector<b_rule> gen_traf_block;
     for (auto iter = seed_hot_spot.begin(); iter != seed_hot_spot.end(); ++iter) {
         b_rule to_push = *iter;
-        to_push.mutate_pred(mut_scalar[0], mut_scalar[1]);
+        to_push.mutate_pred(para.mut_scalar[0], para.mut_scalar[1]);
         gen_traf_block.push_back(to_push);
     }
     return gen_traf_block;
@@ -455,7 +559,7 @@ void tracer::raw_snapshot(string tracedir, double start_time, double interval) {
 }
 
 void tracer::pcap_snapshot(size_t file_st, double interval, pref_addr src_subnet, pref_addr dst_subnet) {
-    fs::path dir(pcap_dir);
+    fs::path dir(para.pcap_dir);
     jesusBorn = EpochT(-1,0);
 
     boost::unordered_map<pair<size_t, size_t>, size_t> hostpair_rec;
@@ -717,7 +821,7 @@ void tracer::pFlow_pruning_gen(bool evolving) {
     }
 
     // create root dir
-    fs::path dir(trace_root_dir);
+    fs::path dir(para.trace_root_dir);
     if (fs::create_directory(dir)) {
         cout<<"creating: " << dir.string()<<endl;
     } else {
@@ -727,11 +831,11 @@ void tracer::pFlow_pruning_gen(bool evolving) {
     /* get the arrival time of each flow. */
     cout << "Generating flow arrival file ... ..."<<endl;
     unordered_set<addr_5tup> flowInfo;
-    if (fs::exists(fs::path(flowInfoFile_str))) {
-        ifstream infile(flowInfoFile_str.c_str());
+    if (fs::exists(fs::path(para.flowInfoFile_str))) {
+        ifstream infile(para.flowInfoFile_str.c_str());
         for (string str; getline(infile, str);) {
             addr_5tup packet(str);
-            if (packet.timestamp > simuT)
+            if (packet.timestamp > para.simuT)
                 continue;
             flowInfo.insert(packet);
         }
@@ -744,7 +848,7 @@ void tracer::pFlow_pruning_gen(bool evolving) {
 
     // trace generated in format of  "trace-200k-0.05-20"
     stringstream ss;
-    ss<<dir.string()<<"/trace-"<<flow_rate<<"k-"<<cold_prob<<"-"<<hotspot_no;
+    ss<<dir.string()<<"/trace-"<<para.flow_rate<<"k-"<<para.cold_prob<<"-"<<para.hotspot_no;
     gen_trace_dir = ss.str();
 
     if (evolving)
@@ -777,9 +881,9 @@ void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo) const {
 
     /* prepare hot spots */
     list<h_rule> hotspot_queue;
-    ifstream in (hotcandi_str);
+    ifstream in (para.hotcandi_str);
 
-    for (uint32_t i = 0; i < hotspot_no; i++) {
+    for (uint32_t i = 0; i < para.hotspot_no; i++) {
         string line;
         if (!getline(in, line)) {
             in.clear();
@@ -796,14 +900,14 @@ void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo) const {
 
     const double smoothing_interval = 10.0;
     double next_checkpoint = smoothing_interval;
-    double flow_thres = 10* flow_rate;
+    double flow_thres = 10 * para.flow_rate;
 
     vector< addr_5tup > header_buf;
     header_buf.reserve(3000);
     uint32_t id = 0;
     uint32_t total_header = 0;
 
-    double nextKickOut = hotvtime;
+    double nextKickOut = para.hotvtime;
 
     for (auto iter = ts_prune_map.begin(); iter != ts_prune_map.end(); ++iter) {
         if (iter->first > next_checkpoint) {
@@ -813,10 +917,10 @@ void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo) const {
             for (i = 0; i < flow_thres && i < header_buf.size(); ++i) {
                 addr_5tup header;
 
-                if ((double) rand()/RAND_MAX < (1-cold_prob)) {
+                if ((double) rand()/RAND_MAX < (1-para.cold_prob)) {
                     /* hot packets */
                     auto q_iter = hotspot_queue.begin();
-                    advance(q_iter, rand()%hotspot_no);
+                    advance(q_iter, rand() % para.hotspot_no);
                     header = q_iter->gen_header();
                 } else {
                     /* cold packets */
@@ -832,7 +936,7 @@ void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo) const {
             header_buf.clear();
             next_checkpoint += smoothing_interval;
         }
-        
+
         header_buf.push_back(iter->second);
 
         if (iter->first > nextKickOut) {
@@ -845,11 +949,11 @@ void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo) const {
             }
             h_rule hr (line, rList->list);
             hotspot_queue.push_back(hr);
-            nextKickOut += hotvtime;
+            nextKickOut += para.hotvtime;
         }
     }
 
-    cout << "after smoothing, average: " << double(total_header)/simuT <<endl;
+    cout << "after smoothing, average: " << double(total_header)/para.simuT <<endl;
 
     /* process using multi-thread; */
     fs::path temp1(gen_trace_dir+"/IDtrace");
@@ -862,7 +966,8 @@ void tracer::flow_pruneGen_mp( unordered_set<addr_5tup> & flowInfo) const {
     for(uint32_t file_id = 0; file_id < to_proc_files.size(); ++file_id) {
         results_exp.push_back(std::async(std::launch::async,
                                          &tracer::f_pg_st, this,
-                                         to_proc_files[file_id], file_id, &pruned_map));
+                                         to_proc_files[file_id],
+                                         file_id, &pruned_map));
     }
 
     for (uint32_t file_id = 0; file_id < to_proc_files.size(); ++file_id) {
@@ -891,35 +996,35 @@ void tracer::flow_pruneGen_mp_ev( unordered_set<addr_5tup> & flowInfo) const {
 
     // prepair hot spots
     vector<h_rule> hotspot_seed;
-    ifstream in (hotcandi_str);
+    ifstream in (para.hotcandi_str);
 
     for (string str; getline(in, str); ) {
         vector<string> temp;
         boost::split(temp, str, boost::is_any_of("\t"));
 
-        if (boost::lexical_cast<uint32_t>(temp.back()) > hot_rule_thres) {
+        if (boost::lexical_cast<uint32_t>(temp.back()) > para.hot_rule_thres) {
             h_rule hr(str, rList->list);
             hotspot_seed.push_back(hr);
         }
     }
 
     random_shuffle(hotspot_seed.begin(), hotspot_seed.end());
-    if (hot_candi_no > hotspot_seed.size()) {
+    if (para.hot_candi_no > hotspot_seed.size()) {
         cout<<"revert to: " << hotspot_seed.size() << " hotspots"<<endl;
     } else {
-        hotspot_seed = vector<h_rule>(hotspot_seed.begin(), hotspot_seed.begin()+hot_candi_no);
+        hotspot_seed = vector<h_rule>(hotspot_seed.begin(), hotspot_seed.begin()+ para.hot_candi_no);
     }
     vector<h_rule> hotspot_vec;
 
     for (auto iter = hotspot_seed.begin(); iter != hotspot_seed.end(); ++iter) {
         h_rule hr = *iter;
-        hr.mutate_pred(mut_scalar[0], mut_scalar[1]);
+        hr.mutate_pred(para.mut_scalar[0], para.mut_scalar[1]);
         hotspot_vec.push_back(hr);
     }
 
     list<h_rule> hotspot_queue;
-    auto cur_hot_iter = hotspot_vec.begin() + hotspot_no;
-    for (size_t i = 0; i < hotspot_no; i++) {
+    auto cur_hot_iter = hotspot_vec.begin() + para.hotspot_no;
+    for (size_t i = 0; i < para.hotspot_no; i++) {
         h_rule hr = hotspot_vec[i];
         hotspot_queue.push_back(hr);
     }
@@ -928,13 +1033,13 @@ void tracer::flow_pruneGen_mp_ev( unordered_set<addr_5tup> & flowInfo) const {
     boost::unordered_map<addr_5tup, pair<uint32_t, addr_5tup> > pruned_map;
     const double smoothing_interval = 10.0;
     double next_checkpoint = smoothing_interval;
-    double flow_thres = 10* flow_rate;
+    double flow_thres = 10 * para.flow_rate;
     vector< addr_5tup > header_buf;
     header_buf.reserve(3000);
     uint32_t id = 0;
     uint32_t total_header = 0;
-    double nextKickOut = hotvtime;
-    double nextEvolving = evolving_time;
+    double nextKickOut = para.hotvtime;
+    double nextEvolving = para.evolving_time;
 
     for (auto iter = ts_prune_map.begin(); iter != ts_prune_map.end(); ++iter) {
         if (iter->first > next_checkpoint) {
@@ -942,9 +1047,9 @@ void tracer::flow_pruneGen_mp_ev( unordered_set<addr_5tup> & flowInfo) const {
             uint32_t i = 0 ;
             for (i = 0; i < flow_thres && i < header_buf.size(); ++i) {
                 addr_5tup header;
-                if ((double) rand() /RAND_MAX < (1-cold_prob)) { // no noise
+                if ((double) rand() /RAND_MAX < (1-para.cold_prob)) { // no noise
                     auto q_iter = hotspot_queue.begin();
-                    advance(q_iter, rand()%hotspot_no);
+                    advance(q_iter, rand()%para.hotspot_no);
                     header = q_iter->gen_header();
                 } else {
                     header = rList->list[(rand()%(rList->list.size()))].get_random();
@@ -964,7 +1069,7 @@ void tracer::flow_pruneGen_mp_ev( unordered_set<addr_5tup> & flowInfo) const {
                 cur_hot_iter = hotspot_vec.begin();
             hotspot_queue.push_back(*cur_hot_iter);
             ++cur_hot_iter;
-            nextKickOut += hotvtime;
+            nextKickOut += para.hotvtime;
         }
 
         if (iter->first > nextEvolving) {
@@ -972,15 +1077,15 @@ void tracer::flow_pruneGen_mp_ev( unordered_set<addr_5tup> & flowInfo) const {
             for (int i = 0; i < hotspot_vec.size(); ++i)
                 choice.push_back(i);
             random_shuffle(choice.begin(), choice.end());
-            for (int i = 0; i < evolving_no; ++i) {
+            for (int i = 0; i < para.evolving_no; ++i) {
                 h_rule hr = hotspot_seed[choice[i]];
-                hr.mutate_pred(mut_scalar[0], mut_scalar[1]);
+                hr.mutate_pred(para.mut_scalar[0], para.mut_scalar[1]);
                 hotspot_vec[choice[i]] = hr;
             }
-            nextEvolving += evolving_time;
+            nextEvolving += para.evolving_time;
         }
     }
-    cout << "after smoothing, average: " << double(total_header)/simuT <<endl;
+    cout << "after smoothing, average: " << double(total_header)/para.simuT <<endl;
 
     // process using multi-thread;
     fs::path temp1(gen_trace_dir+"/IDtrace");
@@ -1036,7 +1141,7 @@ void tracer::f_pg_st(string ref_file, uint32_t id, boost::unordered_map<addr_5tu
 
     for (string str; getline(in, str); ) {
         addr_5tup packet (str, jesusBorn); // readable;
-        if (packet.timestamp > simuT)
+        if (packet.timestamp > para.simuT)
             break;
         auto iter = map_ptr->find(packet);
         if (iter != map_ptr->end()) {
@@ -1089,7 +1194,7 @@ boost::unordered_set<addr_5tup> tracer::flow_arr_mp() const {
     }
 
     // print the results;
-    ofstream outfile(flowInfoFile_str);
+    ofstream outfile(para.flowInfoFile_str);
     outfile.precision(15);
     for (boost::unordered_set<addr_5tup>::iterator iter = flowInfo_set.begin(); iter != flowInfo_set.end(); ++iter) {
         outfile<< iter->str_easy_RW() <<endl;
@@ -1114,7 +1219,7 @@ boost::unordered_set<addr_5tup> tracer::f_arr_st(string ref_file) const {
     in.push(infile);
     for (string str; getline(in, str); ) {
         addr_5tup packet(str, jesusBorn);
-        if (packet.timestamp > simuT)
+        if (packet.timestamp > para.simuT)
             break;
         partial_flow_rec.insert(packet);
     }
@@ -1194,7 +1299,7 @@ void tracer::p_count_st(const fs::path gz_file_ptr, atomic_uint * thr_n_ptr, mut
         in.push(infile);
         for (string str; getline(in, str); ) {
             addr_5tup packet(str, jesusBorn);
-            if (packet.timestamp > simuT) {
+            if (packet.timestamp > para.simuT) {
                 (*reachend_ptr) = true;
                 break;
             }
@@ -1224,10 +1329,10 @@ void tracer::p_count_st(const fs::path gz_file_ptr, atomic_uint * thr_n_ptr, mut
 
 
 void tracer::parse_pcap_file_mp(size_t min, size_t max) const {
-    if (fs::create_directory(fs::path(parsed_pcap_dir)))
-        cout << "creating" << parsed_pcap_dir <<endl;
+    if (fs::create_directory(fs::path(para.parsed_pcap_dir)))
+        cout << "creating" << para.parsed_pcap_dir <<endl;
     else
-        cout << "exists: "<< parsed_pcap_dir<<endl;
+        cout << "exists: "<< para.parsed_pcap_dir<<endl;
 
     const size_t File_BLK = 3;
     size_t thread_no = count_proc();
@@ -1246,7 +1351,7 @@ void tracer::parse_pcap_file_mp(size_t min, size_t max) const {
     vector< std::future<void> > results_exp;
 
     size_t counter = 0;
-    fs::path dir(pcap_dir);
+    fs::path dir(para.pcap_dir);
     if (fs::exists(dir) && fs::is_directory(dir)) {
         Path_Vec_T pvec;
         std::copy(fs::directory_iterator(dir), fs::directory_iterator(), std::back_inserter(pvec));
@@ -1316,7 +1421,7 @@ void tracer::p_pf_st(vector<string> to_proc, size_t id) const {
 
     stringstream ss;
 
-    ss<<parsed_pcap_dir+"/packData";
+    ss<<para.parsed_pcap_dir+"/packData";
     ss<<std::setw(3)<<std::setfill('0')<<id;
     ss<<"txt.gz";
 
@@ -1333,7 +1438,7 @@ void tracer::p_pf_st(vector<string> to_proc, size_t id) const {
             ss.str(string());
             ss.clear();
             ++id;
-            ss<<parsed_pcap_dir+"/packData";
+            ss<<para.parsed_pcap_dir+"/packData";
             ss<<std::setw(3)<<std::setfill('0')<<id;
             ss<<"txt.gz";
             outfile.open(ss.str());

@@ -123,9 +123,9 @@ void print_help() {
 
 int main(int argc, char * argv[]) {
     /* configuration  */
-    char * trace_file_str = NULL;
-    char * if_name = NULL;
-    char * stat_file_str = NULL;
+    char trace_file_str[100];
+    char if_name[10];
+    char stat_file_str[100];
     int factor = 1;
     int ipv6_flag = 1;
 
@@ -147,7 +147,7 @@ int main(int argc, char * argv[]) {
 
         int option_index = 0;
 
-        getopt_res = getopt_long (argc, argv, "f:i:s:F:",
+        getopt_res = getopt_long (argc, argv, "hf:i:s:F:",
                                   tracegen_options, &option_index);
 
         if (getopt_res == -1)
@@ -158,13 +158,13 @@ int main(int argc, char * argv[]) {
             if (tracegen_options[option_index].flag != 0)
                 break;
         case 'f':
-            trace_file_str = optarg;
+            strcpy(trace_file_str, optarg);
             break;
         case 'i':
-            if_name = optarg;
+            strcpy(if_name, optarg);
             break;
         case 's':
-            stat_file_str = optarg;
+            strcpy(stat_file_str, optarg);
             break;
         case 'F':
             factor = atoi(optarg);
