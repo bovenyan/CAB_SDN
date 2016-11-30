@@ -81,7 +81,7 @@ int make_pkt(const addr_5tup & header, uint8_t ** data, uint32_t * pkt_len) {
 
 int make_pkt_ipv6(const addr_5tup & header, uint8_t ** data, uint32_t * pkt_len) {
     uint32_t payload_size = sizeof(timespec);
-    uint32_t buffer_size = sizeof(sniff_ethernet) + sizeof(sniff_ip) +
+    uint32_t buffer_size = sizeof(sniff_ethernet) + sizeof(sniff_ipv6) +
                            sizeof(sniff_tcp) + payload_size;
     uint8_t * buffer = new uint8_t[buffer_size];
 
@@ -90,14 +90,19 @@ int make_pkt_ipv6(const addr_5tup & header, uint8_t ** data, uint32_t * pkt_len)
     sniff_ethernet * eth = (sniff_ethernet *)buffer;
     sniff_ipv6 * ip = (sniff_ipv6 *)(buffer+sizeof(sniff_ethernet));
     sniff_tcp * tcp = (sniff_tcp *)(buffer + sizeof(sniff_ethernet) +
-                                    sizeof(sniff_ip));
+                                    sizeof(sniff_ipv6));
     uint8_t * body = buffer + sizeof(sniff_ethernet) +
-                     sizeof(sniff_ip) + sizeof(sniff_tcp);
+                     sizeof(sniff_ipv6) + sizeof(sniff_tcp);
+
+    //DEBUG
+    std::cout<<"sizeOfIPv6 = "<<sizeof(sniff_ipv6)<<endl;
+    std::cout<<"before sniff_ethernet()\n";
 
     *eth = sniff_ethernet();
 
     /* Map ipv4:port to ipv6  */
     // TODO: check big edian/small edian
+    std::cout<<"before map ipv4+port to ipv6"<<endl;
     *ip = sniff_ipv6();
     *tcp = sniff_tcp();
     *(uint32_t *)(ip->ip_src.s6_addr + 12) = htonl(header.addrs[0]);
@@ -106,6 +111,8 @@ int make_pkt_ipv6(const addr_5tup & header, uint8_t ** data, uint32_t * pkt_len)
     *(uint32_t *)(ip->ip_dst.s6_addr + 4) = htonl(header.addrs[3]);
     ip->ip_len = htonl(buffer_size - sizeof(sniff_ethernet));
 
+    //DEBUG
+    std::cout<<"before making time stamp\n";
     /* make time stamp */
     timespec * timestamp = (timespec *)body;
     clock_gettime(CLOCK_REALTIME, timestamp);
@@ -113,6 +120,8 @@ int make_pkt_ipv6(const addr_5tup & header, uint8_t ** data, uint32_t * pkt_len)
     *data = buffer;
     *pkt_len = buffer_size;
 
+    //DEBUG
+    std::cout<<"before return of mk_pkt_ipv6"<<endl;
     return 0;
 }
 
@@ -191,6 +200,9 @@ int main(int argc, char * argv[]) {
     pd = pcap_open_live(if_name, MAX_ETHER_FRAME_LEN, 1,
                         READ_TIMEOUT, pebuf);
 
+    //DEBUG
+    std::cout<<"before sending"<<endl;
+
     /* start sending  */
     ifstream trace_file(trace_file_str);
 
@@ -199,6 +211,10 @@ int main(int argc, char * argv[]) {
         print_help();
         return 2;
     }
+
+
+    //DEBUG
+    std::cout<<"before try"<<endl;
 
     try {
         io::filtering_istream in;
@@ -213,6 +229,7 @@ int main(int argc, char * argv[]) {
         /* for recording packet sent */
         // std::ofstream ofs;
         // ofs.open("./flows", std::ofstream::out);
+        std::cout<<"before sending 2 flows"<<endl;
         //for debugging use, send 2 flows.
         int iTest2FLow = 2;
         while(getline(in,line)&&iTest2FLow) {
@@ -221,11 +238,13 @@ int main(int argc, char * argv[]) {
 
             uint8_t * pkt = nullptr;
             uint32_t  pkt_len = 0;
-
+            //DEBUG
+            std::cout<<"before setting packet interval"<<endl;
             /* set packet interval */
             TimeSpec next_pkt_ts(pkt_header.timestamp * factor);
             clock_gettime(CLOCK_MONOTONIC, &now.time_point_);
-
+            //DEBUG
+            std::cout<<"before if expression"<<endl;
             if (now < zero + next_pkt_ts) {
                 TimeSpec to_sleep = next_pkt_ts + zero - now;
                 nanosleep(&to_sleep.time_point_, nullptr);
@@ -237,13 +256,15 @@ int main(int argc, char * argv[]) {
             //     flows.insert(ph_str);
             //     ofs << ph_str << endl;
             // }
-
+            //DEBUG
+            std::cout<<"before making ip packet\n";
             if (ipv6_flag) {
                 make_pkt_ipv6(pkt_header,&pkt,&pkt_len);
             } else {
                 make_pkt(pkt_header,&pkt,&pkt_len);
             }
-            pcap_sendpacket(pd,pkt,pkt_len);
+            std::cout<<"packet length == "<<pkt_len<<endl;
+            std::cout<<"the return of pcap_sendpacket == "<<pcap_sendpacket(pd,pkt,pkt_len)<<endl;
 
             delete [] pkt;
         }
