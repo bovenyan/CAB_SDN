@@ -6,6 +6,8 @@
 
 /* Ethernet header */
 #define ETHER_TYPE_IP 0x0800
+#define ETHER_TYPE_IPV6 0x86DD
+
 struct sniff_ethernet {
     sniff_ethernet():ether_dhost {0},ether_shost {0},ether_type(htons(ETHER_TYPE_IP)) {}
     uint8_t ether_dhost[ETHER_ADDR_LEN]; /* Destination host address */
@@ -23,8 +25,8 @@ struct sniff_ip {
          ip_off(0x0000),
          ip_ttl(64),
          ip_p(0x06) {
-        inet_aton("10.0.0.1",&ip_src);
-        inet_aton("10.0.0.2",&ip_dst);
+        inet_aton("10.0.0.1", &ip_src);
+        inet_aton("10.0.0.2", &ip_dst);
     }
     uint8_t ip_vhl;		/* version << 4 | header length >> 2 */
 #define IP_HL(ip)		(((ip)->ip_vhl) & 0x0f)

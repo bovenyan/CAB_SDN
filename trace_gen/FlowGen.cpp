@@ -88,6 +88,9 @@ int make_pkt_ipv6(const addr_5tup & header, uint8_t ** data, uint32_t * pkt_len)
     memset(buffer, 0, buffer_size);
 
     sniff_ethernet * eth = (sniff_ethernet *)buffer;
+    eth->ether_type = htons(ETHER_TYPE_IPV6);
+
+
     sniff_ipv6 * ip = (sniff_ipv6 *)(buffer+sizeof(sniff_ethernet));
     sniff_tcp * tcp = (sniff_tcp *)(buffer + sizeof(sniff_ethernet) +
                                     sizeof(sniff_ipv6));
@@ -95,7 +98,11 @@ int make_pkt_ipv6(const addr_5tup & header, uint8_t ** data, uint32_t * pkt_len)
                      sizeof(sniff_ipv6) + sizeof(sniff_tcp);
 
     //DEBUG
-    std::cout<<"sizeOfIPv6 = "<<sizeof(sniff_ipv6)<<endl;
+    std::cout<<"sizeofEther: "<< sizeof(sniff_ethernet) << endl;
+    std::cout<<"sizeOfIPv6: " << sizeof(sniff_ipv6) << endl;
+    std::cout<<"sizeofTcp:  " << sizeof(sniff_tcp) << endl;
+    std::cout<<"sizeOfbody: " << payload_size << endl;
+    std::cout<<"buffer :  "   << buffer_size << endl;
     std::cout<<"before sniff_ethernet()\n";
 
     *eth = sniff_ethernet();
@@ -259,9 +266,9 @@ int main(int argc, char * argv[]) {
             //DEBUG
             std::cout<<"before making ip packet\n";
             if (ipv6_flag) {
-                make_pkt_ipv6(pkt_header,&pkt,&pkt_len);
+                make_pkt_ipv6(pkt_header, &pkt, &pkt_len);
             } else {
-                make_pkt(pkt_header,&pkt,&pkt_len);
+                make_pkt(pkt_header, &pkt, &pkt_len);
             }
             std::cout<<"packet length == "<<pkt_len<<endl;
             std::cout<<"the return of pcap_sendpacket == "<<pcap_sendpacket(pd,pkt,pkt_len)<<endl;
