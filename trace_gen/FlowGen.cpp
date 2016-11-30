@@ -67,7 +67,7 @@ int make_pkt(const addr_5tup & header, uint8_t ** data, uint32_t * pkt_len) {
     *tcp = sniff_tcp();
     ip->ip_src.s_addr = htonl(header.addrs[0]);
     ip->ip_dst.s_addr = htonl(header.addrs[1]);
-    ip->ip_len = htonl(buffer_size - sizeof(sniff_ethernet));
+    ip->ip_len = htons(buffer_size - sizeof(sniff_ethernet));
 
     /* make time stamp */
     timespec * timestamp = (timespec *)body;
@@ -80,49 +80,80 @@ int make_pkt(const addr_5tup & header, uint8_t ** data, uint32_t * pkt_len) {
 }
 
 int make_pkt_ipv6(const addr_5tup & header, uint8_t ** data, uint32_t * pkt_len) {
-    uint32_t payload_size = sizeof(timespec);
+    // uint32_t payload_size = sizeof(timespec);
+    // uint32_t buffer_size = sizeof(sniff_ethernet) + sizeof(sniff_ipv6) +
+    //                       sizeof(sniff_tcp) + payload_size;
     uint32_t buffer_size = sizeof(sniff_ethernet) + sizeof(sniff_ipv6) +
-                           sizeof(sniff_tcp) + payload_size;
+                           sizeof(sniff_icmp);
     uint8_t * buffer = new uint8_t[buffer_size];
 
     memset(buffer, 0, buffer_size);
 
     sniff_ethernet * eth = (sniff_ethernet *)buffer;
-    eth->ether_type = htons(ETHER_TYPE_IPV6);
-
-
     sniff_ipv6 * ip = (sniff_ipv6 *)(buffer+sizeof(sniff_ethernet));
-    sniff_tcp * tcp = (sniff_tcp *)(buffer + sizeof(sniff_ethernet) +
-                                    sizeof(sniff_ipv6));
-    uint8_t * body = buffer + sizeof(sniff_ethernet) +
-                     sizeof(sniff_ipv6) + sizeof(sniff_tcp);
+    // sniff_tcp * tcp = (sniff_tcp *)(buffer + sizeof(sniff_ethernet) +
+    sniff_icmp * icmp = (sniff_icmp *)(buffer + sizeof(sniff_ethernet) +
+                                      sizeof(sniff_ipv6));
+    // uint8_t * body = buffer + sizeof(sniff_ethernet) +
+    //                 sizeof(sniff_ipv6) + sizeof(sniff_tcp);
 
     //DEBUG
     std::cout<<"sizeofEther: "<< sizeof(sniff_ethernet) << endl;
     std::cout<<"sizeOfIPv6: " << sizeof(sniff_ipv6) << endl;
-    std::cout<<"sizeofTcp:  " << sizeof(sniff_tcp) << endl;
-    std::cout<<"sizeOfbody: " << payload_size << endl;
+    // std::cout<<"sizeofTcp:  " << sizeof(sniff_tcp) << endl;
+    // std::cout<<"sizeOfbody: " << payload_size << endl;
+    std::cout<<"sizeoficmp:  " << sizeof(sniff_icmp) << endl;
     std::cout<<"buffer :  "   << buffer_size << endl;
-    std::cout<<"before sniff_ethernet()\n";
+    // std::cout<<"before sniff_ethernet()\n";
 
     *eth = sniff_ethernet();
+    eth->ether_type = htons(ETHER_TYPE_IPV6);
+    unsigned char src_mac[ETHER_ADDR_LEN] = {0xa0, 0x36, 0x9f, 0x71, 0x14, 0x04};
+    // unsigned char dst_mac[ETHER_ADDR_LEN] = {0xa0, 0x36, 0x9f, 0x71, 0x13, 0xfa};
+    unsigned char dst_mac[ETHER_ADDR_LEN] = {0x33, 0x33, 0xff, 0x71, 0x13, 0xfa};
+    memcpy(eth->ether_shost, &src_mac, ETHER_ADDR_LEN);
+    memcpy(eth->ether_dhost, &dst_mac, ETHER_ADDR_LEN);
 
     /* Map ipv4:port to ipv6  */
     // TODO: check big edian/small edian
     std::cout<<"before map ipv4+port to ipv6"<<endl;
     *ip = sniff_ipv6();
-    *tcp = sniff_tcp();
+    // *tcp = sniff_tcp();
     *(uint32_t *)(ip->ip_src.s6_addr + 12) = htonl(header.addrs[0]);
-    *(uint32_t *)(ip->ip_src.s6_addr + 4) = htonl(header.addrs[2]);
-    *(uint32_t *)(ip->ip_dst.s6_addr + 12) = htonl(header.addrs[1]);
-    *(uint32_t *)(ip->ip_dst.s6_addr + 4) = htonl(header.addrs[3]);
-    ip->ip_len = htonl(buffer_size - sizeof(sniff_ethernet));
+    *(uint32_t *)(ip->ip_src.s6_addr + 8) = htonl(header.addrs[2]);
+    *(uint32_t *)(ip->ip_src.s6_addr + 4) = htonl(header.addrs[1]);
+    *(uint32_t *)(ip->ip_src.s6_addr) = htonl(header.addrs[3]);
+
+    unsigned char tar_ip[16] = {0xfe, 0x80, 0x00, 0x00,
+                                0x00, 0x00, 0x00, 0x00,
+                                0xa2, 0x36, 0x9f, 0xff,
+                                0xfe, 0x71, 0x13, 0xfa
+                               };
+    unsigned char dst_ip[16] = {0xff, 0x02, 0x00, 0x00,
+                                0x00, 0x00, 0x00, 0x00,
+                                0x00, 0x00, 0x00, 0x01,
+                                0xff, 0x71, 0x13, 0xfa
+                               };
+    unsigned char gen_ip[16] = {0xfe, 0x80, 0x00, 0x00,
+                                0x00, 0x00, 0x00, 0x00,
+                                0xa2, 0x36, 0x9f, 0xff,
+                                0xfe, 0x71, 0x14, 0x04};
+
+    memcpy(ip->ip_dst.s6_addr, dst_ip, 16);
+    memcpy(ip->ip_src.s6_addr, gen_ip, 16);
+
+    ip->ip_len = htons(buffer_size - sizeof(sniff_ethernet) - sizeof(sniff_ip));
+    ip->ip_nxt = 58;
+    // TODO: calculate ICMP chksum 
+    *icmp = sniff_icmp();
+    memcpy(icmp->tar_ip.s6_addr, tar_ip, 16);
+    memcpy(icmp->orig_mac, src_mac, 6);
 
     //DEBUG
-    std::cout<<"before making time stamp\n";
+    // std::cout<<"before making time stamp\n";
     /* make time stamp */
-    timespec * timestamp = (timespec *)body;
-    clock_gettime(CLOCK_REALTIME, timestamp);
+    // timespec * timestamp = (timespec *)body;
+    // clock_gettime(CLOCK_REALTIME, timestamp);
 
     *data = buffer;
     *pkt_len = buffer_size;
@@ -251,7 +282,8 @@ int main(int argc, char * argv[]) {
             TimeSpec next_pkt_ts(pkt_header.timestamp * factor);
             clock_gettime(CLOCK_MONOTONIC, &now.time_point_);
             //DEBUG
-            std::cout<<"before if expression"<<endl;
+
+            cout<<"before if expression"<<endl;
             if (now < zero + next_pkt_ts) {
                 TimeSpec to_sleep = next_pkt_ts + zero - now;
                 nanosleep(&to_sleep.time_point_, nullptr);
@@ -270,8 +302,10 @@ int main(int argc, char * argv[]) {
             } else {
                 make_pkt(pkt_header, &pkt, &pkt_len);
             }
-            std::cout<<"packet length == "<<pkt_len<<endl;
-            std::cout<<"the return of pcap_sendpacket == "<<pcap_sendpacket(pd,pkt,pkt_len)<<endl;
+
+            cout<< "packet length == " << pkt_len << endl;
+
+            int result = pcap_sendpacket(pd,pkt,pkt_len);
 
             delete [] pkt;
         }

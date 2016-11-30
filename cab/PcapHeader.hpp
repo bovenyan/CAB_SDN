@@ -62,6 +62,20 @@ struct sniff_ipv6 {
     struct in6_addr ip_src, ip_dst;
 };
 
+struct sniff_icmp {
+    sniff_icmp ()
+        :type_code(htons(34560)),
+         opt_type_len(257),
+         chksum(htons(27447)),
+         msg(0) {}
+    uint16_t type_code;
+    uint16_t chksum;
+    uint32_t msg;
+    struct in6_addr tar_ip;
+    uint16_t opt_type_len;
+    uint8_t orig_mac[ETHER_ADDR_LEN];
+};
+
 /* TCP header */
 typedef uint32_t tcp_seq;
 #define TH_FIN 0x01
