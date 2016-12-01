@@ -16,6 +16,7 @@ add_definitions(-DBOOST_LOG_DYN_LINK)
 add_executable(TracePrepare TracePrepare.cpp TraceGen.cpp)
 add_executable(FlowGen FlowGen.cpp)
 add_executable(FlowEcho FlowEcho.cpp)
+add_executable(CalTrace CalTrace.cpp)
 
 if(UNIX)
     target_link_libraries(
@@ -43,6 +44,12 @@ if(UNIX)
         )
     target_link_libraries(
         FlowEcho
+        pcap
+        rt
+        ${Boost_LIBRARIES}
+        )
+    target_link_libraries(
+        CalTrace
         pcap
         rt
         ${Boost_LIBRARIES}
