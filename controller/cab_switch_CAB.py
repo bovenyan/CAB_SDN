@@ -91,12 +91,22 @@ class CABSwitch(app_manager.RyuApp):
         datapath.send_msg(mod)
 
         # set table0 default rule: go to controller
-        match = parser.OFPMatch()
+        # port1->port2: go to controller
+        match = parser.OFPMatch(in_port=1);
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER)]
 
         inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
                                              actions)]
         self.add_flow(datapath, 0, 0, match, inst, ofproto.OFP_NO_BUFFER, 0)
+
+        # port2: go to port 1
+        match = parser.OFPMatch(in_port=2)
+        actions = [parser.OFPActionOutput(1, 0)]
+
+        inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
+                                             actions)]
+        self.add_flow(datapath, 0, 0, match, inst, ofproto.OFP_NO_BUFFER, 0)
+        
         # set table1 default : drop
         inst2 = []
         self.add_flow(datapath, 1, 0, match, inst2, ofproto.OFP_NO_BUFFER, 0)
