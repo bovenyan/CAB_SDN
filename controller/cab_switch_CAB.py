@@ -51,7 +51,8 @@ class CABSwitch(app_manager.RyuApp):
         self.packetin = 0
         self.packetout = 0
         self.flowmod = 0
-        self.tracefile = raw_input('Enter Tracename: ')
+        # self.tracefile = raw_input('Enter Tracename: ')
+        self.tracefile = "tracefile"
         self.buckets = {}
         self.query_map = {}
         # open('buckets', 'w').close()

@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
     int tup2_or_tup4 = 0;
     bool evolving = false;
 
-    print_tree = string("../../metadata/tree_pre.dat");
+    print_tree = string("../metadata/tree_pr.dat");
 
     int getopt_res;
     while (1) {

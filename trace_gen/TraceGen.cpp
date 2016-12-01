@@ -206,7 +206,7 @@ void tracer::print_setup() const {
     cout <<" ======= SETUP BRIEF: ======="<< endl;
     cout <<"(basic)"<<endl;
     cout <<"Avg flow arrival rate:\t\t"<<para.flow_rate<<endl;
-    cout <<"Trace length:\t\t\t"<<para.flow_rate<<" sec"<<endl;
+    cout <<"Trace length:\t\t\t"<<para.simuT<<" sec"<<endl;
     cout <<"(locality)"<<endl;
     cout <<"Cold trace probability: \t"<<para.cold_prob <<endl;
     cout <<"Hot spot no: \t\t\t"<<para.hotspot_no <<endl;

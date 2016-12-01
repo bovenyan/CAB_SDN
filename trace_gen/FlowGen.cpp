@@ -160,7 +160,7 @@ int make_pkt_ipv6(const addr_5tup & header, uint8_t ** data, uint32_t * pkt_len)
 }
 
 void print_help() {
-    cerr << "Usage: FlowGen {-s stats_file -i interface -f pcap_file -F factor --ipv6/ipv4}";
+    cerr << "Usage: FlowGen {-s stats_file -i interface -f trace_file -F factor -C pkt_count --ipv6/ipv4}";
     cerr << endl;
 }
 
@@ -171,6 +171,7 @@ int main(int argc, char * argv[]) {
     char stat_file_str[100];
     int factor = 1;
     int ipv6_flag = 0;
+    int max_pkt_cnt = 0;
 
     pcap_t * pd = nullptr;
     char pebuf[PCAP_ERRBUF_SIZE];
@@ -178,19 +179,20 @@ int main(int argc, char * argv[]) {
     int getopt_res;
     while (1) {
         static struct option tracegen_options[] = {
+            {"help",        no_argument,                0, 'h'},
             {"ipv6",        no_argument,                &ipv6_flag, 1},
             {"ipv4",        no_argument,                &ipv6_flag, 0},
-            {"help",        no_argument,                0, 'h'},
             {"file",        required_argument,          0, 'f'},
             {"interface",   required_argument,          0, 'i'},
             {"stats",       required_argument,          0, 's'},
             {"scale",       required_argument,          0, 'S'},
+            {"count",       required_argument,          0, 'C'},
             {0,             0,                          0,  0}
         };
 
         int option_index = 0;
 
-        getopt_res = getopt_long (argc, argv, "hf:i:s:F:",
+        getopt_res = getopt_long (argc, argv, "hf:i:s:F:C:",
                                   tracegen_options, &option_index);
 
         if (getopt_res == -1)
@@ -200,6 +202,9 @@ int main(int argc, char * argv[]) {
         case 0:
             if (tracegen_options[option_index].flag != 0)
                 break;
+        case 'C':
+            max_pkt_cnt = atoi(optarg);
+            break;
         case 'f':
             strcpy(trace_file_str, optarg);
             break;
@@ -253,9 +258,8 @@ int main(int argc, char * argv[]) {
         clock_gettime(CLOCK_MONOTONIC, &zero.time_point_);
 
         uint16_t pkt_idx = 0;
-        int max_pkt_to_send = 20;
 
-        while(getline(in,line) && pkt_idx < max_pkt_to_send) {
+        while(getline(in,line) && (max_pkt_cnt == 0 || pkt_idx < max_pkt_cnt)) {
             ++pkt_idx;
 
             addr_5tup pkt_header(line);
