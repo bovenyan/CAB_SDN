@@ -36,7 +36,7 @@ void print_help() {
 int main(int argc, char * argv[]) {
     /* configuration  */
     char if_name[10] = "";
-    int ipv6_flag = 1;
+    int ipv6_flag = 0;
 
     pcap_t * pd = nullptr;
     struct pcap_pkthdr header;
@@ -90,8 +90,16 @@ int main(int argc, char * argv[]) {
     while (keep_running){
         cout << "wait for packet" << endl;
         packet = pcap_next(pd, &header);
-        pcap_sendpacket(pd, packet, 70);
-        cout << "got packet" << endl;
+	
+	if (packet != NULL){
+            if (ipv6_flag){
+                pcap_sendpacket(pd, packet, 90);
+	    }
+	    else{
+                pcap_sendpacket(pd, packet, 70);
+            }
+            cout << "got packet" << endl;
+	}
     }
 
     cout << "closing...." <<endl;
