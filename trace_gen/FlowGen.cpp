@@ -268,8 +268,8 @@ int main(int argc, char * argv[]) {
         // std::ofstream ofs;
         // ofs.open("./flows", std::ofstream::out);
         std::cout<<"before sending 2 flows"<<endl;
-        //for debugging use, send 2 flows.
-        int iTest2FLow = 2;
+        //for debugging use, send 20 flows.
+        int iTest2FLow = 20;
         while(getline(in,line)&&iTest2FLow) {
             --iTest2FLow;
             addr_5tup pkt_header(line);

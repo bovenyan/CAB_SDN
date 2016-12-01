@@ -35,6 +35,8 @@ from cab_client import *
 # from ryu.lib.packet import tcp
 # import struct
 
+# define output port
+PICA_OUTPUT_PORT = 2
 
 class CABSwitch(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
@@ -105,9 +107,10 @@ class CABSwitch(app_manager.RyuApp):
 
         inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
                                              actions)]
-        self.add_flow(datapath, 0, 0, match, inst, ofproto.OFP_NO_BUFFER, 0)
+        self.add_flow(datapath, 0, 10, match, inst, ofproto.OFP_NO_BUFFER, 0)
         
         # set table1 default : drop
+        match = parser.OFPMatch()
         inst2 = []
         self.add_flow(datapath, 1, 0, match, inst2, ofproto.OFP_NO_BUFFER, 0)
 
@@ -150,7 +153,7 @@ class CABSwitch(app_manager.RyuApp):
             self.is_overflow = False
 
         # msg.data is raw data.
-        # pkt = packet.Packet(msg.data)
+        pkt = packet.Packet(msg.data)
         # header class:
         # http://ryu.readthedocs.org/en/latest/library_packet_ref.html
 
@@ -171,7 +174,7 @@ class CABSwitch(app_manager.RyuApp):
     def handle_no_buffer(self, datapath, data, in_port):
         ofp = datapath.ofproto
         ofp_parser = datapath.ofproto_parser
-        actions = [ofp_parser.OFPActionOutput(3)]
+        actions = [ofp_parser.OFPActionOutput(PICA_OUTPUT_PORT)]
         req = ofp_parser.OFPPacketOut(datapath,
                                       ofp.OFP_NO_BUFFER,
                                       in_port, actions, data)
@@ -184,7 +187,7 @@ class CABSwitch(app_manager.RyuApp):
         if msg.buffer_id == ofp.OFP_NO_BUFFER:
             self.handle_no_buffer(datapath, msg.data, in_port)
         else:
-            actions = [ofp_parser.OFPActionOutput(3)]
+            actions = [ofp_parser.OFPActionOutput(PICA_OUTPUT_PORT)]
             req = ofp_parser.OFPPacketOut(datapath, msg.buffer_id,
                                           in_port, actions)
             datapath.send_msg(req)
@@ -283,6 +286,7 @@ class CABSwitch(app_manager.RyuApp):
         # first install rules, rules[0] is bucket
         for rule in rules[1:]:
             match = parser.OFPMatch()
+            match.set_in_port(1)
             match.set_dl_type(ether.ETH_TYPE_IP)
             # match.set_ip_proto(inet.IPPROTO_TCP)
             match.set_ipv4_src_masked(rule.ip_src, rule.ip_src_mask)
@@ -295,7 +299,7 @@ class CABSwitch(app_manager.RyuApp):
             match.set_dl_src_masked(dl_src, dl_src_mask)
             match.set_dl_dst_masked(dl_dst, dl_dst_mask)
 
-            actions = [parser.OFPActionOutput(3)]
+            actions = [parser.OFPActionOutput(PICA_OUTPUT_PORT)]
             inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
                                                  actions)]
             self.add_flow(datapath, 1, rule.priority,
@@ -317,6 +321,7 @@ class CABSwitch(app_manager.RyuApp):
         # third, install bucket
         bucket = rules[0]
         match = parser.OFPMatch()
+        match.set_in_port(1)
         match.set_dl_type(ether.ETH_TYPE_IP)
         # imatch.set_ip_proto(inet.IPPROTO_TCP)
         match.set_ipv4_src_masked(bucket.ip_src, bucket.ip_src_mask)
@@ -346,7 +351,7 @@ class CABSwitch(app_manager.RyuApp):
                           eth_mask_to_str(bucket.port_dst_mask))
 
     def monitor(self):
-        with open('./results/results_cab_'+self.tracefile, 'w') as f:
+        with open('./results_cab_'+self.tracefile, 'w') as f:
             f.write('time\tqueries\tPacketIn\tFlowMod\n')
             while True:
                 string = str(time.time()) + '\t' \
