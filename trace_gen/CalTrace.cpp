@@ -7,6 +7,7 @@
 #include <sys/time.h>
 #include <vector>
 #include "PcapHeader.hpp"
+#include <iomanip>
 
 using std::string;
 using std::cerr;
@@ -15,9 +16,16 @@ using std::endl;
 using std::unordered_map;
 using std::vector;
 using std::ofstream;
+using std::setw;
+using std::setfill;
 
 void print_help() {
-    cerr << "Usage: FlowEcho {-s src_file -r dst_file}" << endl;
+    cerr << "Usage: FlowEcho -hs:r:b:o:" << endl;
+    cerr << "                -h,--help" << endl;
+    cerr << "                -s,--send   sender file" <<endl;
+    cerr << "                -r,--recv   receiver file" <<endl;
+    cerr << "                -b,--band   aggregation bands" <<endl;
+    cerr << "                -o,--output output file prefix" <<endl;
 }
 
 typedef struct header_addr {
@@ -85,7 +93,7 @@ void dump_TCP_packet(const unsigned char * packet, struct timeval ts,
     if (eth->ether_type != htons(ETHER_TYPE_IP))
         return;
 
-    sniff_ip * ip = (sniff_ip *)(packet + sizeof(sniff_ip));
+    sniff_ip * ip = (sniff_ip *)(packet + sizeof(sniff_ethernet));
 
     header_addr header_val;
     header_val.src_ip = ip->ip_src.s_addr;
@@ -93,6 +101,7 @@ void dump_TCP_packet(const unsigned char * packet, struct timeval ts,
     header_val.src_port = *(uint16_t*)(eth->ether_shost + 4);
     header_val.dst_port = *(uint16_t*)(eth->ether_dhost + 4);
     header_val.ip_id = ip->ip_id;
+    // cout<<"ip_id: "<<htons(ip->ip_id)<<endl;
 
     if (record.find(header_val) != record.end()) {
         record[header_val].push_back(ts);
@@ -105,6 +114,8 @@ void dump_TCP_packet(const unsigned char * packet, struct timeval ts,
 int main(int argc, char * argv[]) {
     char src_file[100] = "";
     char rcv_file[100] = "";
+    char out_file[100] = "latency";
+    int interval = 200;
 
     int getopt_res;
     while (1) {
@@ -112,12 +123,14 @@ int main(int argc, char * argv[]) {
             {"help",        no_argument,                0, 'h'},
             {"send",        required_argument,          0, 's'},
             {"recv",        required_argument,          0, 'r'},
+            {"interval",    required_argument,          0, 'i'},
+            {"output",      required_argument,          0, 'o'},
             {0,             0,                          0,  0}
         };
 
         int option_index = 0;
 
-        getopt_res = getopt_long (argc, argv, "hs:r:",
+        getopt_res = getopt_long (argc, argv, "hs:r:i:o:",
                                   parser_options, &option_index);
 
         if (getopt_res == -1)
@@ -132,6 +145,12 @@ int main(int argc, char * argv[]) {
             break;
         case 'r':
             strcpy(rcv_file, optarg);
+            break;
+        case 'o':
+            strcpy(out_file, optarg);
+            break;
+        case 'i':
+            interval = atoi(optarg);
             break;
         case 'h':
             print_help();
@@ -171,7 +190,8 @@ int main(int argc, char * argv[]) {
     }
     pcap_close(pd);
 
-    ofstream output("latency.data");
+    strcat(out_file, ".data");
+    ofstream output(out_file);
 
     int miss_pkt = 0;
     int total_pkt = 0;
@@ -184,21 +204,31 @@ int main(int argc, char * argv[]) {
     rtt_max.tv_sec = 0;
     rtt_max.tv_usec = 0;
 
-    for (const auto rec : record) {
+    vector<int> band_count(2000, 0);
+
+    for (auto iter = record.begin(); iter != record.end(); ++iter) {
         ++total_pkt;
 
-        if (rec.second.size() != 4) {
+        if (iter->second.size() != 4) {
             ++miss_pkt;
             continue;
         }
 
-        timeval src_del = tv_sub(rec.second[1], rec.second[0]);
-        timeval dst_del = tv_sub(rec.second[3], rec.second[2]);
+        timeval src_del = tv_sub(iter->second[1], iter->second[0]);
+        timeval dst_del = tv_sub(iter->second[3], iter->second[2]);
         timeval rtt = tv_sub(src_del, dst_del);
 
-        output<<rtt.tv_sec<<"."<<rtt.tv_usec<<"\t";
-        output<<src_del.tv_sec<<"."<<src_del.tv_usec<<"\t";
-        output<<dst_del.tv_sec<<"."<<dst_del.tv_usec<<"\t";
+        if (rtt.tv_sec != 0){
+            ++miss_pkt;
+            cout << "too late: "<<rtt.tv_sec<<"."<<setw(6)<<setfill('0')<<rtt.tv_usec<<endl;
+            continue;
+        }
+
+        output<<rtt.tv_sec<<"."<<setw(6)<<setfill('0')<<rtt.tv_usec<<"\t";
+        output<<src_del.tv_usec<<"\t";
+        output<<dst_del.tv_usec<<"\t";
+
+        band_count[rtt.tv_usec/interval]++;
 
         if (tv_cmp(rtt, rtt_min) < 0)
             rtt_min = rtt;
@@ -206,15 +236,24 @@ int main(int argc, char * argv[]) {
         if (tv_cmp(rtt, rtt_max) > 0)
             rtt_max = rtt;
 
-        for (const timeval & ts : rec.second) {
+        for (timeval & ts : iter->second) {
             output<<ts.tv_sec<<"."<<ts.tv_usec<<"\t";
         }
         output<<endl;
     }
     output.close();
 
-    cout<<"max rtt: "<<rtt_max.tv_sec<<"."<<rtt_max.tv_usec<<endl;
-    cout<<"min rtt: "<<rtt_min.tv_sec<<"."<<rtt_min.tv_usec<<endl;
+    cout<<"max rtt (us): "<<rtt_max.tv_sec<<setw(6)<<setfill('0')<<rtt_max.tv_usec<<endl;
+    cout<<"min rtt (us): "<<rtt_max.tv_sec<<setw(6)<<setfill('0')<<rtt_min.tv_usec<<endl;
+    cout<<"missed pkt: " << miss_pkt <<"  total pkt: "<<total_pkt<<endl;
 
+    strcat(out_file, ".agg");
+    ofstream output_agg(out_file);
+
+    for (int i = 0; i < 2000; ++i){
+        output_agg<<i*interval<<"\t\t\t"<<band_count[i]<<endl;
+    }
+    
+    output_agg.close();
     return 0;
 }

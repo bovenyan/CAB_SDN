@@ -275,9 +275,6 @@ class CABSwitch(app_manager.RyuApp):
 
         if bucket_str not in self.buckets:
             self.buckets[bucket_str] = time.time() + timeout
-            # with open('buckets', 'a') as f:
-            #     string = str(time.time()) + '\t' + bucket_str + '\n'
-            #     f.write(string)
         elif self.buckets[bucket_str] < time.time():
             self.buckets[bucket_str] = time.time() + timeout
         else:
@@ -350,6 +347,7 @@ class CABSwitch(app_manager.RyuApp):
                           eth_mask_to_str(bucket.port_src_mask),
                           eth_to_str(bucket.port_dst),
                           eth_mask_to_str(bucket.port_dst_mask))
+        
 
     def monitor(self):
         with open('./results_cab_'+self.tracefile, 'w') as f:

@@ -69,7 +69,9 @@ public:
                 msg.append_uint(approx_bkt.addrs[3].pref);
                 msg.append_uint(approx_bkt.addrs[3].mask);
                 msg.append_uint(id);
-                approx_bkt.print(); // jiaren20161116: Debug information for adding rules from controller to switch
+                
+                /* Debug infor for adding rules from controller to switch */
+                BOOST_LOG_TRIVIAL(debug) << approx_bkt.get_str() << endl; 
             }
 
         }
@@ -216,17 +218,12 @@ void boost_log_init() {
     namespace logging = boost::log;
     namespace keywords = boost::log::keywords;
     namespace sinks = boost::log::sinks;
-//    logging::add_file_log
-//    (
-//        keywords::file_name = "sample_%N.log",
-//        keywords::rotation_size = 10 * 1024 * 1024,
-//        keywords::time_based_rotation = sinks::file::rotation_at_time_point(0, 0, 0),
-//        keywords::format = "[%TimeStamp%]: %Message%"
-//    );
-//
+    
     logging::core::get()->set_filter
     (
-        logging::trivial::severity >= logging::trivial::debug
+        // TODO: debug/info
+        // logging::trivial::severity >= logging::trivial::debug
+        logging::trivial::severity >= logging::trivial::info
     );
 }
 void collector(Adapter & adp, std::ostream & os) {

@@ -21,6 +21,7 @@ sudo insmod ./client_echo.ko
 lsmod | grep cecho
 
 # Usecase test cast checklist
+### prepare 
 0. compile all the tools 
     mkdir build 
     cd build
@@ -28,21 +29,34 @@ lsmod | grep cecho
     make
 
 1. get firewall rules and ipc rules
-    availalble in metadata/ruleset
+    @ metadata/ruleset
     verify that the ruleset has a default full cover rule
 
 2. run trace generator to generate traces
-    cd ../bin
+    @ bin
     ./TracePrepare -c ../config/TracePrepare_config.ini -r ../metadata/ruleset/acl2k.rules
 
-3. run CAB_DAEMON
+### monitoring
+3. run dump_collect.sh at both hosts
+    @ trace_gen
+    ./dump_collect.sh p3p1         or p7p3
+
+### run test
+4. run CAB_DAEMON & ryu_controller
+    @ bin @bigmac01
     ./CABDaemon ../config/CABDaemon_config.ini ../metadata/ruleset/acl2k.rules
     make sure to use the same rule set
 
-4. run dump_collect.sh at both hosts
-    cd ../trace_gen
-    ./dump_collect.sh p3p1         or p7p3
+5. run FlowEcho 
+    @ bin @bigmac02
+    ./FlowEcho -i p7p3 --ipv4
 
-5. run flow generator (remember sudo)
-    cd ../bin
-    sudo ./FlowGen -s blah -i p3p1 -f Trace_Generate/trace-100k-0.01-20/GENtrace/ref_trace.gz --ipv4
+6. run traffic generator (remember sudo)
+    @ bin @bigmac01
+    sudo ./FlowGen -s blah.stats -i p3p1 -f Trace_Generate/trace-100k-0.01-20/GENtrace/ref_trace.gz --ipv4
+
+### collect stats
+6. calculate and plot latency figure.
+    move monitor file from bigmac01 and bigmac02 in step 3. 
+    ./CalTrace  -s bigmac01.file -r bigmac02.file
+    gnuplot ....
