@@ -71,6 +71,12 @@ public:
     string pcap_dir;		    // original pcap trace direcotry
     string parsed_pcap_dir;	    // directory of parsed pcap file
 
+    // bulk generate
+    int flow_rate_step;
+    int flow_rate_step_no;
+    double cold_prob_step;
+     
+
 public:
     tgen_para();
     tgen_para(const tgen_para & another_para);

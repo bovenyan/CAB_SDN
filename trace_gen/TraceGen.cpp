@@ -42,6 +42,8 @@ tgen_para::tgen_para() {
     evolving_no = 10;
 
     prep_mutate = false;
+
+    flow_rate_step 
 }
 
 tgen_para::tgen_para(const tgen_para & another_para) {
@@ -176,6 +178,10 @@ tgen_para::tgen_para(string config_file):tgen_para() {
             if (tmp_arr[0] == "parsed_origin_trace_dir") {
                 parsed_pcap_dir = tmp_arr[1];
                 continue;
+            }
+
+            if (tmp_arr[0] == "flow_rate_step") {
+                
             }
         }
     }

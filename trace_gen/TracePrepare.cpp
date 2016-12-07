@@ -50,6 +50,12 @@ int main(int argc, char* argv[]) {
     int tup2_or_tup4 = 0;
     bool evolving = false;
 
+    // bulk generate
+    bool bulk_gen = true;
+    vector<int> flow_rate_range;
+    vector<int> cold_prob_range;
+    vector<int> hotspot_range;
+
     print_tree = string("../metadata/tree_pr.dat");
 
     int getopt_res;
@@ -57,6 +63,7 @@ int main(int argc, char* argv[]) {
         static struct option tracegen_options[] = {
             {"2tup",        no_argument,                &tup2_or_tup4, 1},
             {"4tup",        no_argument,                &tup2_or_tup4, 0},
+            {"bulk",        no_argument,                0, 'b'},
             {"help",        no_argument,                0, 'h'},
             {"evolving",    no_argument,                0, 'e'},
             {"config",      required_argument,          0, 'c'},
@@ -68,7 +75,7 @@ int main(int argc, char* argv[]) {
 
         int option_index = 0;
 
-        getopt_res = getopt_long (argc, argv, "hec:t:r:R:",
+        getopt_res = getopt_long (argc, argv, "hbec:t:r:R:",
                                   tracegen_options, &option_index);
 
         if (getopt_res == -1)
@@ -78,6 +85,9 @@ int main(int argc, char* argv[]) {
         case 0:
             if (tracegen_options[option_index].flag != 0)
                 break;
+        case 'b':
+            bulk_gen = true;
+            break;
         case 'c':
             tgen_para_file = string(optarg);
             break;
@@ -107,7 +117,7 @@ int main(int argc, char* argv[]) {
     srand (time(NULL));
     logging_init();
 
-    /* apply true for testbed, 2 tuple rule */
+    /* testbed 4 tuple rule*/
     rule_list rList(rule_file, bool(tup2_or_tup4));
 
     // generate bucket tree
