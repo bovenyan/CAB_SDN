@@ -25,9 +25,11 @@ public:
 
     // for micro set
     r_rule get_micro_rule (const addr_5tup &);
+    r_rule get_micro_rule_split (const addr_5tup &);
     int linear_search(const addr_5tup &);
 
-    // for covering set#
+    // for covering set #
+    // TBD
 private:
     typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS> depDAG;
     typedef boost::graph_traits<depDAG>::vertex_descriptor vertex_descriptor;

@@ -3,7 +3,7 @@
 using std::ifstream;
 using std::ofstream;
 using std::string;
-using std::tie;// jiaren:missing the namespace
+using std::tie; // jiaren:missing the namespace
 
 /* constructor
  *
@@ -28,10 +28,10 @@ rule_list::rule_list(string & filename, bool test_bed) {
 
     for(auto iter = list.begin(); iter != list.end(); ++iter) {
         for (auto iter_cp = iter+1; iter_cp != list.end(); ) {
-            if (*iter == *iter_cp) 
+            if (*iter == *iter_cp)
                 iter_cp = list.erase(iter_cp);
-	else
-		++iter_cp;
+            else
+                ++iter_cp;
         }
     }
 }
@@ -50,7 +50,8 @@ void rule_list::obtain_dep() { // obtain the dependency map
     }
 }
 
-r_rule rule_list::get_micro_rule(const addr_5tup & pack) { // get the micro rule for a given packet;
+r_rule rule_list::get_micro_rule(const addr_5tup & pack) { 
+    // get the micro rule for a given packet;
     // linear search to find the matching packet
     uint32_t rule_hit_idx = 0;
     for ( ; rule_hit_idx < list.size(); ++rule_hit_idx ) {
@@ -65,10 +66,16 @@ r_rule rule_list::get_micro_rule(const addr_5tup & pack) { // get the micro rule
 
     // pruning for a micro rule
     r_rule mRule = list[rule_hit_idx];
-    for (auto iter = dep_map[rule_hit_idx].begin(); iter != dep_map[rule_hit_idx].end(); ++iter) {
+    for (auto iter = dep_map[rule_hit_idx].begin();
+            iter != dep_map[rule_hit_idx].end(); ++iter) {
         mRule.prune_mic_rule(list[*iter], pack);
     }
     return mRule;
+}
+
+r_rule rule_list::get_micro_rule_split(const addr_5tup & pack){
+    r_rule m_rule = get_micro_rule(pack);
+    return m_rule.split_cast_TCAM(pack);
 }
 
 int rule_list::linear_search(const addr_5tup & packet) {
@@ -79,36 +86,36 @@ int rule_list::linear_search(const addr_5tup & packet) {
     return -1;
 }
 
-void rule_list::createDAG(){
+void rule_list::createDAG() {
     depDag = depDAG(list.size());
 
-    for (int i = 1; i < list.size(); ++i){
+    for (int i = 1; i < list.size(); ++i) {
         vector<r_rule> residual;
         residual.push_back(r_rule(list[i]));
-        for (int j = i-1; i >= 0; --i){
-            if (range_minus(residual, list[i])){
-                boost::add_edge(j, i, depDag); 
+        for (int j = i-1; i >= 0; --i) {
+            if (range_minus(residual, list[i])) {
+                boost::add_edge(j, i, depDag);
             }
         }
     }
 }
 
 void rule_list::obtain_cover() {
-   vertex_iterator iter, end, adj_iter, adj_end;
-   for (tie(iter, end) = vertices(depDag); iter != end; ++iter){ 
-       cover_map[*iter] = vector<uint32_t>();
-       /*
-       for (tie(adj_iter, adj_end) = adjacent_vertices(*iter, depDag); 
-               adj_iter != adj_end; ++adj_iter){
-           cover_map[*iter].push_back(*adj_iter);
-       }
-       */
-       /* jiaren */
-       for (pair<adjacency_iterator, adjacency_iterator> pairAdj = adjacent_vertices(*iter, depDag);
-            pairAdj.first != pairAdj.second; ++pairAdj.first){
-           cover_map[*iter].push_back(*pairAdj.first);
-       }
-   }
+    vertex_iterator iter, end, adj_iter, adj_end;
+    for (tie(iter, end) = vertices(depDag); iter != end; ++iter) {
+        cover_map[*iter] = vector<uint32_t>();
+        /*
+        for (tie(adj_iter, adj_end) = adjacent_vertices(*iter, depDag);
+                adj_iter != adj_end; ++adj_iter){
+            cover_map[*iter].push_back(*adj_iter);
+        }
+        */
+        /* jiaren */
+        for (pair<adjacency_iterator, adjacency_iterator> pairAdj = adjacent_vertices(*iter, depDag);
+                pairAdj.first != pairAdj.second; ++pairAdj.first) {
+            cover_map[*iter].push_back(*pairAdj.first);
+        }
+    }
 }
 
 void rule_list::clearHitFlag() {
@@ -125,7 +132,8 @@ void rule_list::clearHitFlag() {
 void rule_list::print(const string & filename) {
     ofstream file;
     file.open(filename.c_str());
-    for (vector<p_rule>::iterator iter = list.begin(); iter != list.end(); iter++) {
+    for (vector<p_rule>::iterator iter = list.begin();
+            iter != list.end(); iter++) {
         file<<iter->get_str()<<endl;
     }
     file.close();

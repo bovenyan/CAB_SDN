@@ -166,6 +166,7 @@ public:
 
     inline bool overlap (const range_addr &) const;
     inline range_addr intersect(const range_addr &) const;
+    inline pref_addr split_to_hit (const uint32_t &) const;
     inline bool truncate(range_addr &) const;
     inline bool match (const pref_addr &) const;
     inline bool hit (const uint32_t &) const;
@@ -562,6 +563,40 @@ inline range_addr range_addr::intersect(const range_addr & ra) const { // return
     uint32_t lhs = range[0] > ra.range[0] ? range[0] : ra.range[0];
     uint32_t rhs = range[1] < ra.range[1] ? range[1] : ra.range[1];
     return range_addr(lhs, rhs);
+}
+
+inline pref_addr range_addr::split_to_hit(const uint32_t & pkt_val) const {
+    int maskInt;
+
+    for (maskInt = 32; maskInt > 0; --maskInt){
+        uint32_t mask = ((~uint32_t(0)) << (32-maskInt));
+        
+        uint32_t lower = pkt_val & mask;
+        uint32_t higher = lower + (~mask);
+        
+        if (lower < range[0] || higher > range[1]){
+            break;    
+        }   
+    }
+
+    if (maskInt == 0){
+        if (0 < range[0] || ~0 > range[1]){
+            maskInt = 1;
+        }
+        else{
+            maskInt = 0;
+        }
+    }
+    else{
+        maskInt++; 
+    }
+
+    uint32_t mask = ((~uint32_t(0)) << (32-maskInt));
+    pref_addr pa;
+    pa.pref = pkt_val & mask;
+    pa.mask = mask; 
+
+    return pa;
 }
 
 inline bool range_addr::truncate(range_addr & ra) const { // truncate a rule using current rule  sym

@@ -72,10 +72,10 @@ public:
     string parsed_pcap_dir;	    // directory of parsed pcap file
 
     // bulk generate
+    int bulk_no;
     int flow_rate_step;
-    int flow_rate_step_no;
     double cold_prob_step;
-     
+    int hotspot_no_step;
 
 public:
     tgen_para();

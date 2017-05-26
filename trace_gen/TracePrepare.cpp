@@ -35,9 +35,16 @@ void logging_init() {
 }
 
 void print_usage() {
-    std::cerr << "Usage: ./TracePrepare (--config <config_file>) [-h:c:t:r:R]\n"
+    std::cerr << "Usage: ./TracePrepare (--config <config_file>) [-hbec:t:r:R]\n"
               << "Example: ./TracePrepare -c ../config/TracePrepare_config.ini \\\n"
-              << "                        -r ../metadata/ruleset/acl_8000 -t 8"
+              << "                        -r ../metadata/ruleset/acl_8000 -t 8 \n"
+              << "Options: \n"
+              << "  -c <config_file>            specify configuration file\n"
+              << "  -r <rule_file>              specify rule file\n"
+              << "  -b                          enable bulk generation\n"
+              << "  -e                          enable evolving trace\n"
+              << "  -t                          hard threshold for bucket tree generation\n"
+              << "  -h                          print help msg\n"
               << std::endl;
 }
 
@@ -51,7 +58,7 @@ int main(int argc, char* argv[]) {
     bool evolving = false;
 
     // bulk generate
-    bool bulk_gen = true;
+    bool bulk_gen = false;
     vector<int> flow_rate_range;
     vector<int> cold_prob_range;
     vector<int> hotspot_range;
@@ -130,9 +137,17 @@ int main(int argc, char* argv[]) {
     tGen.print_setup();
 
     tGen.hotspot_prepare();
-    tGen.pFlow_pruning_gen(evolving);
-
-    //tGen.raw_snapshot("./Packet_File/sample-10-12", 10, 300);
-    //tGen.raw_hp_similarity("./Packet_File/sample-10-12", 3600, 30, 120, 20);
-    //tGen.parse_pcap_file_mp(557,594);
+    
+    if (bulk_gen){
+        for (int i = 0; i < tGen.para.bulk_no; ++i){
+            tGen.para.flow_rate += tGen.para.flow_rate_step;
+            tGen.para.cold_prob += tGen.para.cold_prob_step;
+            tGen.para.hotspot_no += tGen.para.hotspot_no_step; 
+            
+            tGen.pFlow_pruning_gen(evolving);
+        }
+    }
+    else{
+        tGen.pFlow_pruning_gen(evolving);
+    }
 }

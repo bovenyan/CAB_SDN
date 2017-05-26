@@ -2,6 +2,7 @@
 #include "RuleList.h"
 #include "BucketTree.h"
 #include "OFswitch.h"
+#include <getopt.h>
 
 using std::cout;
 using std::endl;
@@ -25,74 +26,103 @@ void logging_init() {
 }
 
 void print_usage() {
-    std::cerr << "Usage: CAB_Simu <CAB_Simu_config.ini> [rules_file] [blk_file] [mode_file]"
-              << std::endl;
+    std::cerr << "Usage: ./CAB_Simu (--config <config_file>)" << endl 
+              << "Example: ./CAB_Simu -c ../config/CABSimu_config.ini" << endl 
+              << "Options: " << endl
+              << " -b, --batch              batch test" << endl 
+              << " -p, --preload            specify # of preloaded rule" << endl
+              << " -r, --rule               specify rule list file" << endl
+              << " -t, --thres              specify bucket tree hard threshold" << endl
+              << " -i, --input              specify trace directory" << endl;
 }
 
 int main(int argc, char* argv[]) {
-    if (argc < 2){
-        print_usage();
-        return 1;
+    int getopt_res;
+    string para_file;
+    int preload_capacity = 400;
+    int thres_hard = 8;
+    string rule_file;
+    string input;
+    bool batch_proc = false;
+
+    while (1) {
+        static struct option cab_simu_options[] = {
+            {"batch",       no_argument,                0, 'b'},
+            {"help",        no_argument,                0, 'h'},
+            {"config",      required_argument,          0, 'c'},
+            {"preload",     required_argument,          0, 'p'},
+            {"rule",        required_argument,          0, 'r'},
+            {"thres",       required_argument,          0, 't'},
+            {"input",       required_argument,          0, 'i'},
+            {0,             0,                          0,  0}
+        };
+
+        int option_index = 0;
+
+        getopt_res = getopt_long (argc, argv, "bhc:p:r:t:i:",
+                                  cab_simu_options, &option_index);
+
+        if (getopt_res == -1)
+            break;
+
+        switch (getopt_res) {
+        case 0:
+            if (cab_simu_options[option_index].flag != 0)
+                break;
+        case 'b':
+            batch_proc = true;
+            break;
+        case 'c':
+            para_file = string(optarg);
+            break;
+        case 'i':
+            input = string(optarg);
+            break;
+        case 't':
+            thres_hard = atoi(optarg);
+            break;
+        case 'p':
+            preload_capacity = atoi(optarg);
+            break;
+        case 'r':
+            rule_file = string(optarg);
+            break;
+        case 'h':
+            print_usage();
+            return 0;
+        case '?':
+            print_usage();
+            return 0;
+        default:
+            cout<<getopt_res<<endl;
+            abort();
+        }
     }
-
-    //jiaren20161116
-    std::string rulesFileName;
-    std::string blkFileName;
-    std::string modeFileName;
-
-    std::ifstream iniFile(argv[1]);
-    std::string strLine;
-    std::vector<string> vector_parameters;
-
-    std::getline(iniFile, strLine);
-    boost::split(vector_parameters, strLine, boost::is_any_of(" \t"));
-    rulesFileName = vector_parameters[0];
-    blkFileName = vector_parameters[1];
-    modeFileName = vector_parameters[2];
-
 
     srand (time(NULL));
     logging_init();
-    rule_list rList(rulesFileName);
+    rule_list rList(rule_file);
     rList.obtain_dep();
-    
-    //fs::path dir("./Trace_Generate_blk/spec/");
-    fs::path dir(blkFileName);
+
+    fs::path dir(input);
+    bucket_tree bTree(rList, thres_hard, false, preload_capacity);
+    bTree.pre_alloc();
+
+    OFswitch ofswitch;
+    ofswitch.set_para(para_file, &rList, &bTree);
+
     vector<fs::path> pvec;
     std::copy(fs::directory_iterator(dir), fs::directory_iterator(), std::back_inserter(pvec));
     std::sort(pvec.begin(), pvec.end());
-    bucket_tree bTree(rList, 15, false, 400);
-    bTree.pre_alloc();
 
-    /*
-    for (size_t i = 1; i<20; ++i){
-	cout << "percentage " << i*0.025 << endl;
-    	bucket_tree bTree(rList, 15, false, i*100);
-	cout << "finished tree" <<endl;
-	bTree.pre_alloc();
-    	OFswitch ofswitch;
-    	ofswitch.set_para("../para_src/mode_file", &rList, &bTree);
-    	ofswitch.simuT = 600;
-	ofswitch.TCAMcap = 4000 - 100*i;
-    	ofswitch.tracefile_str = pvec[0].string() + "/GENtrace/ref_trace.gz";
-    	cout << "Processing: "<< pvec[0].string()<<endl;
-	ofswitch.run_test();
-    }*/
-
-    OFswitch ofswitch;
-    ofswitch.set_para(modeFileName, &rList, &bTree);
-
-    for (auto it = pvec.begin(); it != pvec.end(); ++it){
-	    ofswitch.tracefile_str = it->string() + "/GENtrace/ref_trace.gz";
-	    ofswitch.simuT = 600;
-	    cout << " Processing trace: " << it->string() << endl;
-	    cout << "CDR: processing" << endl;
-    	    ofswitch.mode = 2;
-	    ofswitch.run_test();
-	    //ofswitch.simuT = 200;
-	    //cout << "CMR: processing" << endl;
-    	    //ofswitch.mode = 3;
-	    //ofswitch.run_test();
+    for (auto it = pvec.begin(); it != pvec.end(); ++it) {
+        ofswitch.tracefile_str = it->string() + "/GENtrace/ref_trace.gz";
+        // run CAB
+        ofswitch.mode = 0;
+        ofswitch.run_test();
+        // run CMR
+        ofswitch.mode = 2;
+        ofswitch.run_test();
     }
 
     return 0;

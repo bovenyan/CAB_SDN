@@ -56,17 +56,22 @@ void OFswitch::set_para(string para_file, rule_list * rL, bucket_tree * bT) {
  */
 
 void OFswitch::run_test() {
+    cout << "Processing Trace " << tracefile_str <<endl;
     switch (mode) {
     case 0:
+        cout << "Running CAB..." << endl;
         CABtest_rt_TCAM();
         break;
     case 1:
+        cout << "Running CEM..." << endl;
         CEMtest_rt_id();
         break;
     case 2:
+        cout << "Running CDR..." << endl;
         CDRtest_rt();
         break;
     case 3:
+        cout << "Running CMR..." << endl;
         CMRtest_rt();
         break;
     default:
@@ -219,7 +224,6 @@ void OFswitch::CMRtest_rt() {
         return;
     }
 
-
     double curT = 0;
     lru_cache<r_rule> cam_cache(TCAMcap, simuT);
     boost::unordered_set<addr_5tup> flow_rec;
@@ -236,7 +240,8 @@ void OFswitch::CMRtest_rt() {
             curT = packet.timestamp;
             auto res = flow_rec.insert(packet);
 
-            r_rule mRule = rList->get_micro_rule(packet);
+            // r_rule mRule = rList->get_micro_rule(packet);
+            r_rule mRule = rList->get_micro_rule_split(packet);
             cam_cache.ins_rec(mRule, curT, res.second);
             string str;
             if (curT > simuT)
@@ -247,5 +252,3 @@ void OFswitch::CMRtest_rt() {
     }
     cam_cache.fetch_data();
 }
-
-

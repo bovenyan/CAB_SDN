@@ -43,7 +43,9 @@ tgen_para::tgen_para() {
 
     prep_mutate = false;
 
-    flow_rate_step 
+    flow_rate_step = 10; 
+    cold_prob_step = 0;
+    hotspot_no_step = 0;
 }
 
 tgen_para::tgen_para(const tgen_para & another_para) {
@@ -180,8 +182,24 @@ tgen_para::tgen_para(string config_file):tgen_para() {
                 continue;
             }
 
+            if (tmp_arr[0] == "bulk_no") {
+                bulk_no = boost::lexical_cast<int>(tmp_arr[1]);
+                continue;
+            }
+
             if (tmp_arr[0] == "flow_rate_step") {
-                
+                flow_rate_step = boost::lexical_cast<int>(tmp_arr[1]);
+                continue;  
+            }
+
+            if (tmp_arr[0] == "cold_prob_step") {
+                cold_prob_step = boost::lexical_cast<double>(tmp_arr[1]);
+                continue;  
+            }
+
+            if (tmp_arr[0] == "hotspot_no_step") {
+                hotspot_no_step = boost::lexical_cast<int>(tmp_arr[1]);
+                continue;  
             }
         }
     }

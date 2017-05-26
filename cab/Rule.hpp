@@ -6,6 +6,7 @@
 #include <boost/functional/hash.hpp>
 
 class b_rule;
+class r_rule;
 
 class p_rule {
   public:
@@ -27,7 +28,8 @@ class p_rule {
     inline addr_5tup get_random() const;
 
     inline std::pair<p_rule, bool> join_rule(p_rule) const;
-    inline b_rule cast_to_bRule() const; // May 02
+    inline b_rule cast_to_bRule() const; // May 02, 16?
+    inline r_rule cast_to_rRule() const; // May 15, 17
 
     inline std::string get_str() const;
     inline void print() const;
@@ -70,8 +72,10 @@ class r_rule {
 
     inline bool overlap(const r_rule &) const;
     inline void prune_mic_rule(const r_rule &, const addr_5tup &); // Mar 14
+    inline r_rule split_cast_TCAM(const addr_5tup & pack) const; // May 15
     inline friend bool range_minus(vector<r_rule> &, const r_rule &); // Dec. 15 TODO to validate
 
+    inline p_rule cast_to_pRule() const;
     inline b_rule cast_to_bRule() const;
 
     inline std::string get_str() const;
@@ -423,11 +427,20 @@ inline bool r_rule::overlap (const r_rule & rr) const { // check whether another
 
 
 inline void r_rule::prune_mic_rule(const r_rule & rr, const addr_5tup & pack) { // use another r_rule, and pack to prune to a r_rule that tightest to the packet hit.
-    for (uint32_t i =0; i< 4; ++i) {
+    for (uint32_t i = 0; i< 4; ++i) {
         addrs[i].getTighter(pack.addrs[i], rr.addrs[i]);
     }
 }
 
+inline r_rule r_rule::split_cast_TCAM(const addr_5tup & pack) const {
+    p_rule pr;
+    pr.hostpair[0] = addrs[0].split_to_hit(pack.addrs[0]);
+    pr.hostpair[1] = addrs[1].split_to_hit(pack.addrs[1]); 
+    pr.portpair[2] = addrs[2];
+    pr.portpair[3] = addrs[3];
+
+    return pr;
+} 
 
 inline b_rule r_rule::cast_to_bRule() const {
     b_rule br;

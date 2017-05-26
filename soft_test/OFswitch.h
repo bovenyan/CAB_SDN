@@ -1,6 +1,5 @@
 #ifndef OF_SWITCH_H
 #define OF_SWITCH_H
-
 #include "stdafx.h"
 #include "Rule.hpp"
 #include "lru_cache.hpp"
