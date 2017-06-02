@@ -29,10 +29,13 @@ void OFswitch::set_para(string para_file, rule_list * rL, bucket_tree * bT) {
     ifstream ff(para_file);
     rList = rL;
     bTree = bT;
+    
+    cout << "configuring parameter file" << endl;
 
     for (string str; getline(ff, str); ) {
         vector<string> temp;
-        boost::split(temp, str, boost::is_any_of("\t"));
+        boost::split(temp, str, boost::is_any_of(" \t"),
+                boost::token_compress_on);
         if (!temp[0].compare("mode")) {
             mode = boost::lexical_cast<uint32_t>(temp[1]);
         }

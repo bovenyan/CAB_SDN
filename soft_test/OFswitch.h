@@ -20,7 +20,7 @@ public:
     bucket_tree * bTree;
 
 public:
-    uint32_t mode; // mode 0: CAB, mode 1: CEM, mode 2: CMR, mode 3: CDR
+    uint32_t mode; // mode 0: CAB, mode 1: CEM, mode 2: CDR, mode 3: CMR
     double simuT;
     uint32_t TCAMcap;
     std::string tracefile_str;

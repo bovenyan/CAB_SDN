@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
         ofswitch.mode = 0;
         ofswitch.run_test();
         // run CMR
-        ofswitch.mode = 2;
+        ofswitch.mode = 3;
         ofswitch.run_test();
     }
 
