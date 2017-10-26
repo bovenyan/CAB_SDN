@@ -555,7 +555,7 @@ inline uint32_t hash_value(range_addr const & ra) {
 /* member function
  */
 inline bool range_addr::overlap(const range_addr & ad) const { // whether two range_addr overlap  sym
-    return (!(range[1] < ad.range[0]) || (range[0] > ad.range[1]));
+    return (range[1] <= ad.range[1] && range[1] >= ad.range[0]) || (range[0] <= ad.range[1] && range[0] >= ad.range[0]);
 }
 
 inline range_addr range_addr::intersect(const range_addr & ra) const { // return the join of two range addr  sym
