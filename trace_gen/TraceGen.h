@@ -1,7 +1,7 @@
 #ifndef TRACEGEN_H
 #define TRACEGEN_H
 
-#include "stdafx.h"
+#include "headers.h"
 #include "Address.hpp"
 #include "Rule.hpp"
 #include "RuleList.h"

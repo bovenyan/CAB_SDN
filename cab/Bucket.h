@@ -9,7 +9,7 @@
 
 class bucket: public b_rule {
   private:
-    static boost::log::sources::logger lg;
+    // static boost::log::sources::logger lg;
     static void logger_init();
 
   public:

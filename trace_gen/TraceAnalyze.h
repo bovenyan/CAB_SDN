@@ -1,7 +1,7 @@
 #ifndef __TRACE_ANALYZE_H
 #define __TRACE_ANALYZE_H
 
-#include "stdafx.h"
+#include "headers.h"
 #include "Address.hpp"
 #include <set>
 #include <boost/unordered_set.hpp>

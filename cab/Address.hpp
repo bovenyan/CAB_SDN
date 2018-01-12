@@ -2,8 +2,11 @@
 #define ADDRESS_H
 
 #include "stdafx.h"
-#include <boost/functional/hash.hpp>
+#include <functional>
+#include <algorithm>
+// #include <boost/functional/hash.hpp>
 using std::vector;
+using std::hash;
 
 class range_addr;
 
@@ -17,10 +20,13 @@ public:
     inline EpochT(int isec, int imsec):sec(isec),msec(imsec) {}
 
     inline EpochT(const std::string & str) {
-        std::vector<std::string> temp;
-        boost::split(temp, str, boost::is_any_of("%"));
-        sec = boost::lexical_cast<uint32_t> (temp[0]);
-        msec = boost::lexical_cast<uint32_t> (temp[1]);
+        int idx = str.find_first_of("%");
+        sec = stoi(str.substr(0, idx));
+        msec = stoi(str.substr(idx+1));
+        // std::vector<std::string> temp;
+        // boost::split(temp, str, boost::is_any_of("%"));
+        // sec = boost::lexical_cast<uint32_t> (temp[0]);
+        // msec = boost::lexical_cast<uint32_t> (temp[1]);
     }
 
     inline EpochT(const double & dtime) {
@@ -205,26 +211,51 @@ inline addr_5tup::addr_5tup(const addr_5tup & ad) {
 }
 
 inline addr_5tup::addr_5tup(const string & str) {
-    vector<string> temp;
-    boost::split(temp, str, boost::is_any_of("%"));
+    // vector<string> temp;
+    // boost::split(temp, str, boost::is_any_of("%"));
+    // timestamp = boost::lexical_cast<double>(temp[0]);
+    // addrs[0] = boost::lexical_cast<uint32_t>(temp[1]);
+    // addrs[1] = boost::lexical_cast<uint32_t>(temp[2]);
+    // addrs[2] = boost::lexical_cast<uint32_t>(temp[3]);
+    // addrs[3] = boost::lexical_cast<uint32_t>(temp[4]);
+    //
     proto = true;
-    timestamp = boost::lexical_cast<double>(temp[0]);
-    addrs[0] = boost::lexical_cast<uint32_t>(temp[1]);
-    addrs[1] = boost::lexical_cast<uint32_t>(temp[2]);
-    addrs[2] = boost::lexical_cast<uint32_t>(temp[3]);
-    addrs[3] = boost::lexical_cast<uint32_t>(temp[4]);
+
+    int prev = 0;
+    int idx = str.find_first_of("%");
+    timestamp = stod(str.substr(prev, idx));
+    
+    for (int i = 0; i < 4; ++i){
+        prev = idx+1;
+        idx = str.find_first_of("%", prev);
+        addrs[0] = stoul(str.substr(prev, idx - prev));
+    }
 }
 
 inline addr_5tup::addr_5tup(const string & str, const EpochT & offset) {
-    vector<string> temp;
-    boost::split(temp, str, boost::is_any_of("%"));
+    // vector<string> temp;
+    // boost::split(temp, str, boost::is_any_of("%"));
+    // proto = true;
+    // EpochT ts_ep(boost::lexical_cast<uint32_t>(temp[0]), boost::lexical_cast<uint32_t>(temp[1]));
+    // timestamp = ts_ep.toDouble(offset);
+    // addrs[0] = boost::lexical_cast<uint32_t>(temp[2]);
+    // addrs[1] = boost::lexical_cast<uint32_t>(temp[3]);
+    // addrs[2] = boost::lexical_cast<uint32_t>(temp[4]);
+    // addrs[3] = boost::lexical_cast<uint32_t>(temp[5]);
     proto = true;
-    EpochT ts_ep(boost::lexical_cast<uint32_t>(temp[0]), boost::lexical_cast<uint32_t>(temp[1]));
+    int prev = 0;
+    int idx = str.find_first_of("%");
+    int sec = stoul(str.substr(prev, idx));
+    prev = idx+1;
+    int msec = stoul(str.substr(prev, idx - prev));
+    EpochT ts_ep(sec, msec);
     timestamp = ts_ep.toDouble(offset);
-    addrs[0] = boost::lexical_cast<uint32_t>(temp[2]);
-    addrs[1] = boost::lexical_cast<uint32_t>(temp[3]);
-    addrs[2] = boost::lexical_cast<uint32_t>(temp[4]);
-    addrs[3] = boost::lexical_cast<uint32_t>(temp[5]);
+
+    for (int i = 0; i < 4; ++i){
+        prev = idx+1;
+        idx = str.find_first_of("%", prev);
+        addrs[0] = stoul(str.substr(prev, idx - prev));
+    }
 }
 
 /*
@@ -260,12 +291,24 @@ inline addr_5tup::addr_5tup(const string & str, bool readable) {
 
 
 inline addr_5tup::addr_5tup(const string & str, double ts) {
-    vector<string> temp;
-    boost::split(temp, str, boost::is_any_of("\t"));
+    // vector<string> temp;
+    // boost::split(temp, str, boost::is_any_of("\t"));
+    // timestamp = ts;
+    // proto = true;
+    // for (uint32_t i = 0; i < 4; i++) {
+    //     addrs[i] = boost::lexical_cast<uint32_t>(temp[i]);
+    // }
+
+    proto = 0;
     timestamp = ts;
-    proto = true;
-    for (uint32_t i = 0; i < 4; i++) {
-        addrs[i] = boost::lexical_cast<uint32_t>(temp[i]);
+
+    int prev = 0;
+    int idx = -1;
+
+    for (int i = 0; i < 4; ++i){
+        prev = idx+1;
+        idx = str.find_first_of("%");
+        addrs[i] = stoul(str.substr(prev, idx-prev)); 
     }
 }
 
@@ -285,10 +328,16 @@ inline bool addr_5tup::operator==(const addr_5tup & rhs) const {
 
 inline uint32_t hash_value(addr_5tup const & packet) {
     size_t seed = 0;
-    boost::hash_combine(seed, packet.addrs[0]);
-    boost::hash_combine(seed, packet.addrs[1]);
-    boost::hash_combine(seed, packet.addrs[2]);
-    boost::hash_combine(seed, packet.addrs[3]);
+    // boost::hash_combine(seed, packet.addrs[0]);
+    // boost::hash_combine(seed, packet.addrs[1]);
+    // boost::hash_combine(seed, packet.addrs[2]);
+    // boost::hash_combine(seed, packet.addrs[3]);
+    
+    hash<uint32_t> hasher;
+    seed ^= hasher(packet.addrs[0]) + (seed<<6) + (seed>>2);
+    seed ^= hasher(packet.addrs[1]) + (seed<<6) + (seed>>2);
+    seed ^= hasher(packet.addrs[2]) + (seed<<6) + (seed>>2);
+    seed ^= hasher(packet.addrs[3]) + (seed<<6) + (seed>>2);
     return seed;
 }
 
@@ -350,22 +399,37 @@ inline pref_addr::pref_addr() {
 }
 
 inline pref_addr::pref_addr(const string & prefstr) {
-    vector<string> temp1;
-    boost::split(temp1, prefstr, boost::is_any_of("/"));
+    // vector<string> temp1;
+    // boost::split(temp1, prefstr, boost::is_any_of("/"));
 
-    uint32_t maskInt = boost::lexical_cast<uint32_t>(temp1[1]);
+    // uint32_t maskInt = boost::lexical_cast<uint32_t>(temp1[1]);
+    int idx = prefstr.find_first_of("/");
+    uint32_t maskInt = stoul(prefstr.substr(idx+1));
     mask = 0;
-    if (maskInt != 0)
-        mask = ((~uint32_t(0)) << (32-maskInt));
-
-    vector<string> temp2;
-    boost::split(temp2, temp1[0], boost::is_any_of("."));
-
     pref = 0;
-    for(uint32_t i=0; i<4; i++) {
-        pref = (pref<<8) + boost::lexical_cast<uint32_t>(temp2[i]);
+
+    string pStr = prefstr.substr(0, idx);
+    idx = -1;
+    int prev = 0;
+
+    for (int i = 0; i < 4; ++i){
+        prev = idx+1;
+        idx = pStr.find_first_of(".", prev);
+        pref = (pref<<8) + stoul(prefstr.substr(prev, idx-prev));
     }
+    
     pref=(pref & mask);
+
+    // if (maskInt != 0)
+    //     mask = ((~uint32_t(0)) << (32-maskInt));
+
+    // vector<string> temp2;
+    // boost::split(temp2, temp1[0], boost::is_any_of("."));
+
+    // pref = 0;
+    // for(uint32_t i=0; i<4; i++) {
+    //     pref = (pref<<8) + boost::lexical_cast<uint32_t>(temp2[i]);
+    // }
 }
 
 inline pref_addr::pref_addr(const pref_addr & pa) {
@@ -517,11 +581,15 @@ inline range_addr::range_addr(const range_addr & ra) {
 
 inline range_addr::range_addr(const string & rangestr) {
     vector<string> temp1;
-    boost::split(temp1, rangestr, boost::is_any_of(":"));
-    boost::trim(temp1[0]);
-    boost::trim(temp1[1]);
-    range[0] = boost::lexical_cast<uint32_t> (temp1[0]);
-    range[1] = boost::lexical_cast<uint32_t> (temp1[1]);
+    // boost::split(temp1, rangestr, boost::is_any_of(":"));
+    // boost::trim(temp1[0]);
+    // boost::trim(temp1[1]);
+    int idx = rangestr.find_first_of(":");
+    range[0] = stoul(rangestr.substr(0,idx));
+    range[1] = stoul(rangestr.substr(idx+1));
+
+    // range[0] = boost::lexical_cast<uint32_t> (temp1[0]);
+    // range[1] = boost::lexical_cast<uint32_t> (temp1[1]);
 }
 
 inline range_addr::range_addr(const pref_addr & rule) {
@@ -548,8 +616,11 @@ inline bool range_addr::operator==(const range_addr & ra) const {
 
 inline uint32_t hash_value(range_addr const & ra) {
     size_t seed = 0;
-    boost::hash_combine(seed, ra.range[0]);
-    boost::hash_combine(seed, ra.range[1]);
+    hash<uint32_t> hasher;
+    seed ^= hasher(ra.range[0]) + (seed<<6) + (seed>>2);
+    seed ^= hasher(ra.range[1]) + (seed<<6) + (seed>>2);
+    // boost::hash_combine(seed, ra.range[0]);
+    // boost::hash_combine(seed, ra.range[1]);
     return seed;
 }
 
@@ -678,8 +749,8 @@ inline pref_addr range_addr::approx(bool is_port = true) const {
 
 inline vector<range_addr> minus_rav(vector<range_addr> & lhs, vector<range_addr> & rhs) { // minus the upper rules
     vector <range_addr> res;
-    sort(lhs.begin(), lhs.end());
-    sort(rhs.begin(), rhs.end());
+    std::sort(lhs.begin(), lhs.end());
+    std::sort(rhs.begin(), rhs.end());
     vector<range_addr>::const_iterator iter_l = lhs.begin();
     vector<range_addr>::const_iterator iter_r = rhs.begin();
     while (iter_l != lhs.end()) {

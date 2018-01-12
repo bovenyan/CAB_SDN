@@ -10,19 +10,19 @@ using std::pair;
 using std::set;
 
 
-namespace logging = boost::log;
-namespace src = boost::log::sources;
-namespace attrs = boost::log::attributes;
+// namespace logging = boost::log;
+// namespace src = boost::log::sources;
+// namespace attrs = boost::log::attributes;
 
 typedef vector<uint32_t>::iterator Iter_id;
 typedef vector<bucket*>::iterator Iter_son;
 
 
-src::logger bucket::lg = src::logger();
+// src::logger bucket::lg = src::logger();
 
-void bucket::logger_init() {
-    bucket::lg.add_attribute("Class", attrs::constant< string > ("BuckObj "));
-}
+// void bucket::logger_init() {
+//     bucket::lg.add_attribute("Class", attrs::constant< string > ("BuckObj "));
+// }
 
 bucket::bucket():hit(false), parent(NULL), max_gain(0) {}
 

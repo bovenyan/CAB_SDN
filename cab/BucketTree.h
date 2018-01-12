@@ -10,13 +10,13 @@
 #include <set>
 #include <deque>
 #include <list>
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
-#include <boost/filesystem.hpp>
+// #include <boost/iostreams/filtering_stream.hpp>
+// #include <boost/iostreams/filter/gzip.hpp>
+// #include <boost/filesystem.hpp>
 
 class bucket_tree {
-  private:
-    boost::log::sources::logger bTree_log;
+  // private:
+  //   boost::log::sources::logger bTree_log;
   public:
     bucket * root;
     rule_list * rList;
@@ -68,7 +68,7 @@ class bucket_tree {
 
   public:
     // test use
-    void search_test(const string &) ;
+    // void search_test(const string &) ;
     void static_traf_test(const string &);
     void evolving_traf_test_dyn(const std::vector<b_rule> &, const std::vector<b_rule> &, std::ofstream &, double,  pair<size_t, size_t> & , size_t &);
     void evolving_traf_test_stat(const std::vector<b_rule> &, const std::vector<b_rule> &, std::ofstream &);

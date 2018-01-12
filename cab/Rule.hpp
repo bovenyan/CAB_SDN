@@ -2,8 +2,9 @@
 #define RULE_H
 
 #include "stdafx.h"
+#include <algorithm>
 #include "Address.hpp"
-#include <boost/functional/hash.hpp>
+// #include <boost/functional/hash.hpp>
 
 class b_rule;
 class r_rule;
@@ -124,18 +125,32 @@ inline p_rule::p_rule(const p_rule & pr) {
 }
 
 inline p_rule::p_rule(const string & rule_str, bool test_bed) {
-    vector<string> temp;
-    boost::split(temp, rule_str, boost::is_any_of("\t"));
-    temp[0].erase(0,1);
-    hostpair[0] = pref_addr(temp[0]);
-    hostpair[1] = pref_addr(temp[1]);
+    int prev = 0;
+    int idx = rule_str.find_first_of("\t");
+    hostpair[0] = pref_addr(rule_str.substr(1,idx-1));
+
+    prev = idx+1;
+    idx = rule_str.find_first_of("\t", prev);
+    hostpair[1] = pref_addr(rule_str.substr(prev, idx-prev));
+
+    // vector<string> temp;
+    // boost::split(temp, rule_str, boost::is_any_of("\t"));
+    // temp[0].erase(0,1);
+    // hostpair[0] = pref_addr(temp[0]);
+    // hostpair[1] = pref_addr(temp[1]);
 
     if (test_bed) {
         portpair[0] = range_addr();
         portpair[1] = range_addr();
     } else {
-        portpair[0] = range_addr(temp[2]);
-        portpair[1] = range_addr(temp[3]);
+        prev = idx+1;
+        idx = rule_str.find_first_of("\t", prev);
+        portpair[0] = range_addr(rule_str.substr(prev, idx-prev));
+        prev = idx+1;
+        idx = rule_str.find_first_of("\t", prev);
+        portpair[1] = range_addr(rule_str.substr(prev, idx-prev));
+        // portpair[0] = range_addr(temp[2]);
+        // portpair[1] = range_addr(temp[3]);
     }
     proto = true;
     hit = false;
@@ -267,10 +282,18 @@ inline b_rule::b_rule(const b_rule & br) { // copy constructor
 }
 
 inline b_rule::b_rule(const string & rule_str) { // construct from string
-    vector<string> temp;
-    boost::split(temp, rule_str, boost::is_any_of("\t"));
-    for(uint32_t i=0; i<4; i++) {
-        addrs[i] = pref_addr(temp[i]);
+    // vector<string> temp;
+    // boost::split(temp, rule_str, boost::is_any_of("\t"));
+    // for(uint32_t i=0; i<4; i++) {
+    //     addrs[i] = pref_addr(temp[i]);
+    // }
+    
+    int idx = -1;
+    int prev = 0;
+    for(int i = 0; i < 4; ++i){
+        prev = idx+1;
+        idx = rule_str.find_first_of("\t", prev);
+        addrs[i] = rule_str.substr(prev, idx-prev); 
     }
 }
 
@@ -386,8 +409,10 @@ inline bool r_rule::operator==(const r_rule & rhs) const {
 
 inline uint32_t hash_value(r_rule const & rr) { // hash the detailed range value for the value;
     size_t seed = 0;
+    hash<uint32_t> hasher;
     for (uint32_t i = 0; i < 4; ++i) {
-        boost::hash_combine(seed, hash_value(rr.addrs[i]));
+        seed ^= hasher(hash_value(rr.addrs[i])) + (seed<<6) + (seed>>2);
+        //boost::hash_combine(seed, hash_value(rr.addrs[i]));
     }
     return seed;
 }

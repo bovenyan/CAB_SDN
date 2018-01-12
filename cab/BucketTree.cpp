@@ -3,8 +3,8 @@
 typedef vector<uint32_t>::iterator Iter_id;
 typedef vector<bucket*>::iterator Iter_son;
 
-namespace fs = boost::filesystem;
-namespace io = boost::iostreams;
+// namespace fs = boost::filesystem;
+// namespace io = boost::iostreams;
 
 using std::set;
 using std::list;
@@ -538,47 +538,47 @@ void bucket_tree::print_bucket(ofstream & in, bucket * bk, bool detail) { // con
  *
  */
 
-void bucket_tree::search_test(const string & tracefile_str) {
-    io::filtering_istream in;
-    in.push(io::gzip_decompressor());
-    ifstream infile(tracefile_str);
-    in.push(infile);
-
-    string str;
-    cout << "Start search testing ... "<< endl;
-    size_t cold_packet = 0;
-    size_t hot_packet = 0;
-    while (getline(in, str)) {
-        addr_5tup packet(str, false);
-        auto result = search_bucket(packet, root);
-        if (result.first->related_rules.size() < 10) {
-            ++cold_packet;
-        } else {
-            ++hot_packet;
-        }
-
-        if (result.first != (search_bucket_seri(packet, root))) {
-            BOOST_LOG(bTree_log) << "Within bucket error: packet: " << str;
-            BOOST_LOG(bTree_log) << "search_buck   res : " << result.first->get_str();
-            BOOST_LOG(bTree_log) << "search_buck_s res : " << result.first->get_str();
-        }
-        if (result.second != rList->linear_search(packet)) {
-            if (pa_rules.find(rList->linear_search(packet)) == pa_rules.end()) { // not pre-allocated
-                BOOST_LOG(bTree_log) << "Search rule error: packet:" << str;
-                if (result.second > 0)
-                    BOOST_LOG(bTree_log) << "search_buck res : " << rList->list[result.second].get_str();
-                else
-                    BOOST_LOG(bTree_log) << "search_buck res : " << "None";
-
-                BOOST_LOG(bTree_log) << "linear_sear res : " << rList->list[rList->linear_search(packet)].get_str();
-            }
-        }
-    }
-
-    BOOST_LOG(bTree_log) << "hot packets: "<< hot_packet;
-    BOOST_LOG(bTree_log) << "cold packets: "<< cold_packet;
-    cout << "Search testing finished ... " << endl;
-}
+// void bucket_tree::search_test(const string & tracefile_str) {
+//     io::filtering_istream in;
+//     in.push(io::gzip_decompressor());
+//     ifstream infile(tracefile_str);
+//     in.push(infile);
+// 
+//     string str;
+//     cout << "Start search testing ... "<< endl;
+//     size_t cold_packet = 0;
+//     size_t hot_packet = 0;
+//     while (getline(in, str)) {
+//         addr_5tup packet(str, false);
+//         auto result = search_bucket(packet, root);
+//         if (result.first->related_rules.size() < 10) {
+//             ++cold_packet;
+//         } else {
+//             ++hot_packet;
+//         }
+// 
+//         if (result.first != (search_bucket_seri(packet, root))) {
+//             cout << "Within bucket error: packet: " << str;
+//             cout << "search_buck   res : " << result.first->get_str();
+//             cout << "search_buck_s res : " << result.first->get_str();
+//         }
+//         if (result.second != rList->linear_search(packet)) {
+//             if (pa_rules.find(rList->linear_search(packet)) == pa_rules.end()) { // not pre-allocated
+//                 cout << "Search rule error: packet:" << str;
+//                 if (result.second > 0)
+//                     cout << "search_buck res : " << rList->list[result.second].get_str();
+//                 else
+//                     cout << "search_buck res : " << "None";
+// 
+//                 cout << "linear_sear res : " << rList->list[rList->linear_search(packet)].get_str();
+//             }
+//         }
+//     }
+// 
+//     cout << "hot packets: "<< hot_packet;
+//     cout << "cold packets: "<< cold_packet;
+//     cout << "Search testing finished ... " << endl;
+// }
 
 void bucket_tree::static_traf_test(const string & file_str) {
     ifstream file(file_str);
@@ -588,9 +588,11 @@ void bucket_tree::static_traf_test(const string & file_str) {
 
     debug = false;
     for (string str; getline(file, str); ++counter) {
-        vector<string> temp;
-        boost::split(temp, str, boost::is_any_of("\t"));
-        size_t r_exp = boost::lexical_cast<size_t>(temp.back());
+        int idx = str.find_last_of("\t");
+        size_t r_exp = stoul(str.substr(idx));
+        // vector<string> temp;
+        // boost::split(temp, str, boost::is_any_of("\t"));
+        // size_t r_exp = boost::lexical_cast<size_t>(temp.back());
         if (r_exp > 40) {
             --counter;
             continue;
@@ -613,9 +615,11 @@ void bucket_tree::static_traf_test(const string & file_str) {
     counter = 0;
     file.seekg(std::ios::beg);
     for (string str; getline(file, str); ++counter) {
-        vector<string> temp;
-        boost::split(temp, str, boost::is_any_of("\t"));
-        size_t r_exp = boost::lexical_cast<size_t>(temp.back());
+        int idx = str.find_last_of("\t");
+        size_t r_exp = stoul(str.substr(idx));
+        // vector<string> temp;
+        // boost::split(temp, str, boost::is_any_of("\t"));
+        // size_t r_exp = boost::lexical_cast<size_t>(temp.back());
         if (r_exp > 40) {
             --counter;
             continue;
@@ -639,7 +643,7 @@ void bucket_tree::static_traf_test(const string & file_str) {
             ss<<*iter << "("<< rList->occupancy[*iter]<<") ";
         }
     }
-    BOOST_LOG(bTree_log)<< "Unused rules: "<<ss.str();
+    cout << "Unused rules: "<<ss.str();
 
     cout << "Cached: " << cached_rules.size() << " rules (" << unused_count << ") " << buck_count << " buckets " <<endl;
 
@@ -673,12 +677,12 @@ void bucket_tree::evolving_traf_test_dyn(const vector<b_rule> & prev, const vect
             }
         }
 
-        BOOST_LOG(bTree_log) << "Dyn Cached: " << cached_rules.size() << " rules (" << unused_count << " unused) " << buck_count << " buckets ";
+        cout << "Dyn Cached: " << cached_rules.size() << " rules (" << unused_count << " unused) " << buck_count << " buckets ";
 
         rec_file << cached_rules.size() << "\t" << buck_count << "\t" << cached_rules.size() + buck_count<<endl;
 
         if (to_adjust) {
-            BOOST_LOG(bTree_log) << "Adjust here: " << counter;
+            cout << "Adjust here: " << counter;
             last_overhead.first = unused_count;
             last_overhead.second = buck_count;
             to_adjust = false;
@@ -717,7 +721,7 @@ void bucket_tree::evolving_traf_test_stat(const vector<b_rule> & prev, const vec
         }
 
         rec_file << cached_rules.size() << "\t" << buck_count << "\t" << cached_rules.size() + buck_count<<endl;
-        BOOST_LOG(bTree_log) << "Stat Cached: " << cached_rules.size() << " rules (" << unused_count << " unused) " << buck_count << " buckets ";
+        cout << "Stat Cached: " << cached_rules.size() << " rules (" << unused_count << " unused) " << buck_count << " buckets ";
 
         current[counter] = after[counter]; // evolve traffic
         root->clearHitFlag();

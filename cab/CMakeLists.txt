@@ -15,18 +15,18 @@ add_definitions(-DBOOST_LOG_DYN_LINK)
 set(CAB Bucket.cpp MicRuleTree.cpp RuleList.cpp BucketTree.cpp)
 add_library(cab ${CAB})
 
-add_executable(CABDaemon CABDaemon.cpp)
-
-if(UNIX)
-    target_link_libraries(
-        CABDaemon
-        cab
-        ${Boost_LIBRARIES}
-        pthread
-        )
-elseif(WIN32)
-elseif(APPLE)
-endif(UNIX)
+# add_executable(CABDaemon CABDaemon.cpp)
+# 
+# if(UNIX)
+#     target_link_libraries(
+#         CABDaemon
+#         cab
+#         ${Boost_LIBRARIES}
+#         pthread
+#         )
+# elseif(WIN32)
+# elseif(APPLE)
+# endif(UNIX)
 
 message(STATUS "c++ flag : " ${CMAKE_CXX_FLAGS}) 
 message(STATUS "this is source dir " ${project_source_dir})
