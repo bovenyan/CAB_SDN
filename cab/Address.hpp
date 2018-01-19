@@ -116,6 +116,7 @@ public:
 public:
     inline addr_5tup();
     inline addr_5tup(const addr_5tup &);
+    inline addr_5tup(const vector<unsigned long> &); // for cython
     inline addr_5tup(const std::string &); // processing gen
     inline addr_5tup(const std::string &, const EpochT &); // processing raw
     inline addr_5tup(const std::string &, double);
@@ -208,6 +209,14 @@ inline addr_5tup::addr_5tup(const addr_5tup & ad) {
         addrs[i] = ad.addrs[i];
     proto = ad.proto;
     timestamp = ad.timestamp;
+}
+
+inline addr_5tup::addr_5tup(const vector<unsigned long> & pktArray){
+    for (int i = 0; i < 4; ++i){
+        addrs[i] = pktArray[i];
+    }
+    proto = true;
+    timestamp = 0;
 }
 
 inline addr_5tup::addr_5tup(const string & str) {

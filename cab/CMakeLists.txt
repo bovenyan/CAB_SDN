@@ -13,7 +13,8 @@ endif()
 add_definitions(-DBOOST_LOG_DYN_LINK)
 
 set(CAB Bucket.cpp MicRuleTree.cpp RuleList.cpp BucketTree.cpp)
-add_library(cab ${CAB})
+add_library(cab SHARED ${CAB})
+set_property(TARGET cab PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # add_executable(CABDaemon CABDaemon.cpp)
 # 

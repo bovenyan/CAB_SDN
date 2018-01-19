@@ -55,6 +55,8 @@ class b_rule {
 
     inline std::string get_str() const;
     inline void print() const;
+
+    inline void serialize_append(vector<unsigned long> & data);
 };
 
 class r_rule {
@@ -475,6 +477,17 @@ inline b_rule r_rule::cast_to_bRule() const {
     br.addrs[3] = addrs[3].approx(true);
 
     return br;
+}
+
+inline void b_rule::serialize_append(vector<unsigned long> & data){
+    data.push_back(addrs[0].pref);
+    data.push_back(addrs[0].mask);
+    data.push_back(addrs[1].pref);
+    data.push_back(addrs[1].mask);
+    data.push_back(addrs[2].pref);
+    data.push_back(addrs[2].mask);
+    data.push_back(addrs[3].pref);
+    data.push_back(addrs[3].mask);
 }
 
 inline bool range_minus(vector<r_rule> & toMinusRules, const r_rule & mRule){

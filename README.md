@@ -60,3 +60,7 @@ lsmod | grep cecho
     move monitor file from bigmac01 and bigmac02 in step 3. 
     ./CalTrace  -s bigmac01.file -r bigmac02.file
     gnuplot ....
+
+### cython programming:
+7. Cython architecture
+    https://docs.google.com/presentation/d/1Ftlk1Brdrdo3kViP4HARJeyc6mb8B30_nAbSSRnc7iM/edit?usp=sharing 
